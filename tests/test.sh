@@ -2,6 +2,7 @@
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
 NC='\033[0m' 
 
 if [ $1 = "run" ]; then
@@ -9,22 +10,23 @@ if [ $1 = "run" ]; then
     unitTestCasesPath=$unitTestPath"/tests/"
     unitTestCases="$(ls $unitTestCasesPath)"
 
-    echo "--------- calling make ---------"
+    echo "${YELLOW}--------- calling make ---------${NC}"
 	for unitTestCase in $unitTestCases
 	do
-        echo "---Make "$unitTestCase
+        echo "---Make "$unitTestCasesPath$unitTestCase
 		(cd $unitTestCasesPath$unitTestCase && make)
 	done
     unitExePath=$unitTestPath"/bin/"
     unitExeFiles="$(ls $unitExePath)"
-    echo "--------- start test ---------"
+    echo "${YELLOW}--------- start test ---------${NC}"
     for exe in $unitExeFiles
 	do
         echo "---Run ./"$unitExePath$exe
-        if eval "./$unitExePath$exe";then
-            echo "${GREEN}ok${NC}"
+        if eval "./$unitExePath$exe" > /dev/null 2>&1 ;then
+            echo "${GREEN}OK${NC}"
         else
-            echo "${RED}error${NC}"
+            #eval "./$unitExePath$exe"
+            echo "${RED}ERROR${NC}"
         fi
 	done
     
