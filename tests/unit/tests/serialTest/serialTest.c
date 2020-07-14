@@ -15,9 +15,9 @@
  * @param second
  * @return
  */
-static bool testArray(uint8_t *first, uint8_t *second) {
+static bool testArray(uint8_t *first, uint8_t *second, int length) {
 
-    for (int e = 0; e < BUFFER_SIZE; e++) {
+    for (int e = 0; e < length; e++) {
         if (first[e] != second[e]) {
             //printf("[%d,%d]%d\n",first[e],first[e],e);
             return false;
@@ -31,6 +31,14 @@ static bool testArray(uint8_t *first, uint8_t *second) {
  * @param instance
  */
 static void dummySerialWrite(serialPort_t *instance) {
+}
+
+/**
+ * data is send instant
+ * @param instance
+ */
+static void instantSerialWrite(serialPort_t *instance) {
+    instance->txBufferTail = instance->txBufferHead;
 }
 
 /**
@@ -83,7 +91,7 @@ static void test_buffer_wrap(void) {
         serialWrite(&testSerial, d++);
     }
     sput_fail_unless(serialTxBytesFree(&testSerial) == 0, "buffer filled");
-    sput_fail_unless(testArray(txBuffer, txRef), "Buffer Test");
+    sput_fail_unless(testArray(txBuffer, txRef,BUFFER_SIZE), "Buffer Test");
     sput_fail_unless(testSerial.txBufferHead == BUFFER_SIZE-1, "txBufferHead");
     sput_fail_unless(testSerial.txBufferTail == 0, "txBufferTail");
 
@@ -107,7 +115,7 @@ static void test_buffer_wrap(void) {
     }
 
     sput_fail_unless(serialTxBytesFree(&testSerial) == 0, "write data");
-    sput_fail_unless(testArray(txBuffer, txRef), "Buffer Test");
+    sput_fail_unless(testArray(txBuffer, txRef,BUFFER_SIZE), "Buffer Test");
     sput_fail_unless(testSerial.txBufferHead == BUFFER_SIZE / 2-1, "txBufferHead");
     sput_fail_unless(testSerial.txBufferTail == BUFFER_SIZE / 2, "txBufferTail");
 }
@@ -139,6 +147,42 @@ static void test_running(void) {
     sput_fail_unless(testSerial.txBufferTail == 2, "txBufferTail");
 }
 
+uint8_t testBlock[4] = { 'T', 'E', 'S', 'T' };
+
+/**
+ * test read of rx buffer
+ */
+static void test_block_write(void) {
+
+    serialPort_t testSerial;
+    testSerial.txBuffer = txBuffer;
+    testSerial.txBufferHead = 0;
+    testSerial.txBufferTail = 0;
+    testSerial.txBufferSize = BUFFER_SIZE;
+
+    //data is send instant
+    testSerial.serialWrite = instantSerialWrite;
+
+    serialBeginWrite(&testSerial);
+    serialWriteBuf(&testSerial, testBlock, 4);
+    sput_fail_unless(testSerial.txBufferHead == 4, "txBufferHead");
+    sput_fail_unless(testSerial.txBufferTail == 0, "txBufferTail");
+    sput_fail_unless(serialTxBytesFree(&testSerial) == BUFFER_SIZE-5, "Buffer Size");
+    sput_fail_unless(testArray(txBuffer, testBlock, 4), "test buffer");
+    serialEndWrite(&testSerial);
+    sput_fail_unless(testSerial.txBufferHead == 4, "txBufferHead");
+    sput_fail_unless(testSerial.txBufferTail == 4, "txBufferTail");
+    sput_fail_unless(isSerialTransmitBufferEmpty(&testSerial), "Buffer empty");
+
+    serialWrite(&testSerial,'a');
+    sput_fail_unless(isSerialTransmitBufferEmpty(&testSerial), "Buffer empty");
+
+    serialBeginWrite(&testSerial);
+    serialWrite(&testSerial,'a');
+    sput_fail_if(isSerialTransmitBufferEmpty(&testSerial), "Buffer is empty");
+    serialEndWrite(&testSerial);
+    sput_fail_unless(isSerialTransmitBufferEmpty(&testSerial), "Buffer empty");
+}
 /**
  * write a byte to the rx Buffer
  * @param instance
@@ -169,7 +213,7 @@ static void test_read(void) {
         rxRef[i] = i + 1;
         writeRxBuffer(&testSerial, i + 1);
     }
-    sput_fail_unless(testArray(rxBuffer, rxRef), "Buffer Test");
+    sput_fail_unless(testArray(rxBuffer, rxRef,BUFFER_SIZE), "Buffer Test");
     sput_fail_unless(testSerial.rxBufferHead == BUFFER_SIZE-1, "rxBufferHead");
     sput_fail_unless(testSerial.rxBufferTail == 0, "rxBufferTail");
 
@@ -227,6 +271,7 @@ static void test_read(void) {
     sput_fail_unless(serialRxBytesWaiting(&testSerial) == 0, "bytes waiting");
 
 }
+
 int main(int argc, char *argv[]) {
     sput_start_testing()
     ;
@@ -235,6 +280,8 @@ int main(int argc, char *argv[]) {
     sput_run_test(test_running);
     sput_enter_suite("Buffer Wrap");
     sput_run_test(test_buffer_wrap);
+    sput_enter_suite("Buffer Block");
+    sput_run_test(test_block_write);
     sput_enter_suite("Buffer Read");
     sput_run_test(test_read);
 
