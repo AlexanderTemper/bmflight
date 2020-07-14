@@ -1,7 +1,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-
 #include "serial.h"
 
 void serialPrint(serialPort_t *instance, const char *str) {
@@ -67,10 +66,14 @@ uint32_t serialTxBytesFree(const serialPort_t *instance) {
 }
 
 uint8_t serialRead(serialPort_t *instance) {
-    return instance->serialRead(instance);
-}
+    uint8_t ch;
 
-bool isSerialTransmitBufferEmpty(const serialPort_t *instance) {
-    return instance->isSerialTransmitBufferEmpty(instance);
+    ch = instance->rxBuffer[instance->rxBufferTail];
+    if (instance->rxBufferTail + 1 >= instance->rxBufferSize) {
+        instance->rxBufferTail = 0;
+    } else {
+        instance->rxBufferTail++;
+    }
+    return ch;
 }
 

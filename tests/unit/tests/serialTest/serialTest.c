@@ -19,6 +19,7 @@ static bool testArray(uint8_t *first, uint8_t *second) {
 
     for (int e = 0; e < BUFFER_SIZE; e++) {
         if (first[e] != second[e]) {
+            //printf("[%d,%d]%d\n",first[e],first[e],e);
             return false;
         }
     }
@@ -60,6 +61,7 @@ static void emulateTransmit(serialPort_t *instance) {
 uint8_t rxBuffer[BUFFER_SIZE];
 uint8_t txBuffer[BUFFER_SIZE];
 uint8_t txRef[BUFFER_SIZE];
+uint8_t rxRef[BUFFER_SIZE];
 
 /**
  * test wrap an filling of tx buffer
@@ -137,6 +139,94 @@ static void test_running(void) {
     sput_fail_unless(testSerial.txBufferTail == 2, "txBufferTail");
 }
 
+/**
+ * write a byte to the rx Buffer
+ * @param instance
+ * @param ch
+ */
+static void writeRxBuffer(serialPort_t *instance, uint8_t ch) {
+    instance->rxBuffer[instance->rxBufferHead] = ch;
+    if (instance->rxBufferHead + 1 >= instance->rxBufferSize) {
+        instance->rxBufferHead = 0;
+    } else {
+        instance->rxBufferHead++;
+    }
+}
+
+/**
+ * test read of rx buffer
+ */
+static void test_read(void) {
+
+    serialPort_t testSerial;
+    testSerial.rxBuffer = rxBuffer;
+    testSerial.rxBufferHead = 0;
+    testSerial.rxBufferTail = 0;
+    testSerial.rxBufferSize = BUFFER_SIZE;
+
+    //fill whole Buffer
+    for (int i = 0; i < BUFFER_SIZE - 1; i++) {
+        rxRef[i] = i + 1;
+        writeRxBuffer(&testSerial, i + 1);
+    }
+    sput_fail_unless(testArray(rxBuffer, rxRef), "Buffer Test");
+    sput_fail_unless(testSerial.rxBufferHead == BUFFER_SIZE-1, "rxBufferHead");
+    sput_fail_unless(testSerial.rxBufferTail == 0, "rxBufferTail");
+
+    // read buffer
+    bool readOK = true;
+    for (int i = 0; serialRxBytesWaiting(&testSerial) > 0; i++) {
+        uint8_t ch = serialRead(&testSerial);
+        if (ch != (uint8_t) (i + 1)) {
+            //printf("%d,%d\n",ch,i);
+            readOK = false;
+        }
+    }
+    sput_fail_unless(readOK, "readTest");
+    sput_fail_unless(testSerial.rxBufferHead == BUFFER_SIZE-1, "rxBufferHead");
+    sput_fail_unless(testSerial.rxBufferTail == BUFFER_SIZE-1, "rxBufferTail");
+    sput_fail_unless(serialRxBytesWaiting(&testSerial) == 0, "bytes waiting");
+
+    writeRxBuffer(&testSerial, 'a');
+    writeRxBuffer(&testSerial, 'b');
+    sput_fail_unless(testSerial.rxBufferHead == 1, "rxBufferHead");
+    sput_fail_unless(testSerial.rxBufferTail == BUFFER_SIZE-1, "rxBufferTail");
+    sput_fail_unless(serialRxBytesWaiting(&testSerial) == 2, "bytes waiting");
+
+    //reset Buffer
+    sput_fail_unless(serialRead(&testSerial) == 'a', "read ");
+    sput_fail_unless(serialRead(&testSerial) == 'b', "read b");
+    sput_fail_unless(serialRxBytesWaiting(&testSerial) == 0, "bytes waiting");
+
+    // read wrap
+    testSerial.rxBufferHead = BUFFER_SIZE / 2;
+    testSerial.rxBufferTail = BUFFER_SIZE / 2;
+
+    memset(rxBuffer, 0, BUFFER_SIZE);
+    memset(rxRef, 0, BUFFER_SIZE);
+    //fill whole Buffer
+    for (int i = 0; i < BUFFER_SIZE - 1; i++) {
+        rxRef[i] = i + 1;
+        writeRxBuffer(&testSerial, i + 1);
+    }
+    sput_fail_unless(testSerial.rxBufferHead == BUFFER_SIZE/2 -1, "rxBufferHead");
+    sput_fail_unless(testSerial.rxBufferTail == BUFFER_SIZE/2, "rxBufferTail");
+
+    // read buffer
+    readOK = true;
+    for (int i = 0; serialRxBytesWaiting(&testSerial) > 0; i++) {
+        uint8_t ch = serialRead(&testSerial);
+        if (ch != (uint8_t) (i + 1)) {
+            //printf("%d,%d\n",ch,i);
+            readOK = false;
+        }
+    }
+    sput_fail_unless(readOK, "readTest");
+    sput_fail_unless(testSerial.rxBufferHead == BUFFER_SIZE/2 -1, "rxBufferHead");
+    sput_fail_unless(testSerial.rxBufferTail == BUFFER_SIZE/2 -1, "rxBufferTail");
+    sput_fail_unless(serialRxBytesWaiting(&testSerial) == 0, "bytes waiting");
+
+}
 int main(int argc, char *argv[]) {
     sput_start_testing()
     ;
@@ -145,6 +235,8 @@ int main(int argc, char *argv[]) {
     sput_run_test(test_running);
     sput_enter_suite("Buffer Wrap");
     sput_run_test(test_buffer_wrap);
+    sput_enter_suite("Buffer Read");
+    sput_run_test(test_read);
 
     sput_finish_testing()
     ;
