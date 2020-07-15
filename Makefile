@@ -23,8 +23,14 @@ endif
 # Include target makefile
 include ./make/mcu/$(TARGET_MCU).mk
 
+INC_PATH += \
+	src
 # List of C source files.
-CSRCS += src/main.c
+CSRCS += \
+	src/main.c	\
+	src/drivers/serial.c \
+	src/common/streambuf.c \
+	src/msp/msp.c
 
 # Add inlcude paths to preprocessor
 CPPFLAGS  += $(foreach INC,$(addprefix ./,$(INC_PATH)),-I$(INC))

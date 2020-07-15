@@ -8,6 +8,8 @@
 #include "usart.h"
 #include "usart_interrupt.h"
 
+#include "drivers/serial.h"
+
 /************************************************************************/
 /* Macro Definitions                                                    */
 /************************************************************************/
@@ -35,69 +37,8 @@ extern volatile bool usart_callback_transmit_flag;
 /*! USART Rx byte */
 extern uint16_t usart_rx_byte;
 
-/************************************************************************/
-/* Function Declarations                                                */
-/************************************************************************/
+void usart_initialize(serialPort_t *instance);
 
-/*!
-* @brief		Initializes the USART module of the MCU
-*
-* @param[in]	NULL
-*
-* @param[out]	NULL
-*
-* @return		NULL
-*
-*/
-void usart_initialize(void);
-
-/*!
-* @brief		Configures the USART module of the MCU
-*
-* @param[in]	NULL
-*
-* @param[out]	NULL
-*
-* @return		NULL
-*
-*/
-void usart_configure(void);
-
-/*!
-* @brief		Configures USART callback register
-*
-* @param[in]	NULL
-*
-* @param[out]	NULL
-*
-* @return		NULL
-*
-*/
-void usart_configure_callbacks(void);
-
-/*!
-* @brief		Called after USART receptions
-*
-* @param[in]	usart_module_ptr	Pointer to the USART module which triggers the interrupt
-*
-* @param[out]	NULL
-*
-* @return		NULL
-*
-*/
-void usart_callback_receive(struct usart_module *const usart_module_ptr);
-
-/*!
-* @brief		Called after USART transmissions
-*
-* @param[in]	usart_module_ptr	Pointer to the USART module which triggers the interrupt
-*
-* @param[out]	NULL
-*
-* @return		NULL
-*
-*/
-void usart_callback_transmit(struct usart_module *const usart_module_ptr);
-
+void mspSerialUartWriteCallback(serialPort_t *instance);
 
 #endif /* usart_support_h_ */

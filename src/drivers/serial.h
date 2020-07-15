@@ -31,6 +31,7 @@ typedef struct serialDevice_s {
     volatile uint8_t txBuffer[64];
 } serialDevice_t;
 
+void initSerial(serialPort_t *instance,void (*serialWriteFnPtr)(serialPort_t *instance));
 void serialWrite(serialPort_t *instance, uint8_t ch);
 void serialWriteBuf(serialPort_t *instance, const uint8_t *data, int count);
 uint8_t serialRead(serialPort_t *instance);
