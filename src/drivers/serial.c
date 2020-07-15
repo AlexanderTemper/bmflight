@@ -1,7 +1,3 @@
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h> //tod weg
-
 #include "serial.h"
 
 void serialPrint(serialPort_t *instance, const char *str) {

@@ -6,8 +6,9 @@
 #include "common/time.h"
 
 
-#define MSP_PORT_INBUF_SIZE 192
+#define MSP_PORT_INBUF_SIZE 256
 #define MSP_PORT_OUTBUF_SIZE 256
+
 
 // return positive for ACK, negative on error, zero for no reply
 typedef enum {
@@ -62,6 +63,8 @@ typedef struct mspPort_s {
     uint_fast16_t dataSize;
     uint8_t checksum;
 } mspPort_t;
+
+typedef mspResult_e (*mspProcessCommandFnPtr)(mspPacket_t *cmd);
 
 void mspInit(mspPort_t *mspPort,struct serialPort_s *serialPort);
 void mspProcess(mspPort_t *port);

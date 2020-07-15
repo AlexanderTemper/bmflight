@@ -22,10 +22,6 @@ struct serialPort_s {
     bool blockWriteToHW;
     // api calls
     void (*serialWrite)(serialPort_t *instance);
-    uint32_t (*serialTotalRxWaiting)(const serialPort_t *instance);
-    uint32_t (*serialTotalTxFree)(const serialPort_t *instance);
-    uint8_t (*serialRead)(serialPort_t *instance);
-    bool (*isSerialTransmitBufferEmpty)(const serialPort_t *instance);
 };
 
 
