@@ -1,45 +1,31 @@
-
 #pragma once
 
 #include "platform.h"
 #include "common/streambuf.h"
 #include "common/time.h"
 
-
 #define MSP_PORT_INBUF_SIZE 256
 #define MSP_PORT_OUTBUF_SIZE 256
 
-
 // return positive for ACK, negative on error, zero for no reply
 typedef enum {
-    MSP_RESULT_ACK = 1,
-    MSP_RESULT_ERROR = -1,
-    MSP_RESULT_NO_REPLY = 0,
-    MSP_RESULT_CMD_UNKNOWN = -2,   // don't know how to process command, try next handler
+    MSP_RESULT_ACK = 1, MSP_RESULT_ERROR = -1, MSP_RESULT_NO_REPLY = 0, MSP_RESULT_CMD_UNKNOWN = -2,   // don't know how to process command, try next handler
 } mspResult_e;
 
 typedef enum {
-    MSP_DIRECTION_REPLY = 0,
-    MSP_DIRECTION_REQUEST = 1
+    MSP_DIRECTION_REPLY = 0, MSP_DIRECTION_REQUEST = 1
 } mspDirection_e;
 
-
 typedef enum {
-    MSP_IDLE,
-    MSP_HEADER_START,
-    MSP_HEADER_M,
+    MSP_IDLE, MSP_HEADER_START, MSP_HEADER_M,
 
-    MSP_HEADER_V1,
-    MSP_PAYLOAD_V1,
-    MSP_CHECKSUM_V1,
+    MSP_HEADER_V1, MSP_PAYLOAD_V1, MSP_CHECKSUM_V1,
 
     MSP_COMMAND_RECEIVED
 } mspState_e;
 
-
 typedef enum {
-    MSP_PACKET_COMMAND,
-    MSP_PACKET_REPLY
+    MSP_PACKET_COMMAND, MSP_PACKET_REPLY
 } mspPacketType_e;
 
 typedef struct mspPacket_s {
@@ -49,7 +35,6 @@ typedef struct mspPacket_s {
     int16_t result;
     uint8_t direction;
 } mspPacket_t;
-
 
 typedef struct mspPort_s {
     struct serialPort_s *port;
@@ -66,6 +51,8 @@ typedef struct mspPort_s {
 
 typedef mspResult_e (*mspProcessCommandFnPtr)(mspPacket_t *cmd);
 
-void mspInit(mspPort_t *mspPort,struct serialPort_s *serialPort);
+void mspDebugData(const uint8_t* data, uint16_t len);
+void initMspDebugPort(mspPort_t *mspPort);
+void mspInit(mspPort_t *mspPort, struct serialPort_s *serialPort);
 void mspProcess(mspPort_t *port);
 int mspSerialPush(mspPort_t *mspPort, uint8_t cmd, uint8_t *data, int datalen, mspDirection_e direction);

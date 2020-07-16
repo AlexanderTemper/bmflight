@@ -29,6 +29,7 @@ INC_PATH += \
 CSRCS += \
 	src/main.c	\
 	src/drivers/serial.c \
+	src/common/debug.c \
 	src/common/streambuf.c \
 	src/msp/msp.c
 

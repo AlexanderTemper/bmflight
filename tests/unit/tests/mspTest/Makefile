@@ -15,6 +15,7 @@ CSRCS_SRC := \
 	src/common/streambuf.c \
 	src/drivers/serial.c \
 	src/msp/msp.c \
+	src/common/debug.c \
 	
 	
 obj-y := $(addprefix $(BUILD_DIR)/$(APP_NAME)/, $(addsuffix .o,$(basename $(CSRCS_SRC))))	

@@ -3,6 +3,10 @@
 #include "msp/msp.h"
 #include "msp/msp_protocol.h"
 
+static mspPort_t *debugPort;
+void initMspDebugPort(mspPort_t *mspPort) {
+    debugPort = mspPort;
+}
 
 void mspInit(mspPort_t *mspPort, struct serialPort_s *serialPort) {
     mspPort->port = serialPort;
@@ -103,9 +107,6 @@ static uint8_t mspSerialChecksumBuf(uint8_t checksum, const uint8_t *data, int l
     return checksum;
 }
 
-
-
-
 /**
  * encode packet in MSP Frame
  * @param mspPort
@@ -114,6 +115,7 @@ static uint8_t mspSerialChecksumBuf(uint8_t checksum, const uint8_t *data, int l
  * @return
  */
 static int mspSerialSend(mspPort_t *mspPort, mspPacket_t *packet) {
+
 
     const uint8_t dataLen = sbufBytesRemaining(&packet->buf);
     const uint8_t status = (packet->result == MSP_RESULT_ERROR) ? '!' : '>';
@@ -129,13 +131,14 @@ static int mspSerialSend(mspPort_t *mspPort, mspPacket_t *packet) {
     if (!isSerialTransmitBufferEmpty(mspPort->port) && ((int) serialTxBytesFree(mspPort->port) < totalFrameLength)) {
         return 0;
     }
+
     // Transmit frame
     serialBeginWrite(mspPort->port);
-    serialWrite(mspPort->port,'$');
-    serialWrite(mspPort->port,'M');
-    serialWrite(mspPort->port,status);
-    serialWrite(mspPort->port,dataLen);
-    serialWrite(mspPort->port,packet->cmd);
+    serialWrite(mspPort->port, '$');
+    serialWrite(mspPort->port, 'M');
+    serialWrite(mspPort->port, status);
+    serialWrite(mspPort->port, dataLen);
+    serialWrite(mspPort->port, packet->cmd);
     serialWriteBuf(mspPort->port, sbufPtr(&packet->buf), dataLen);
     serialWrite(mspPort->port, checksum);
     serialEndWrite(mspPort->port);
@@ -160,6 +163,13 @@ int mspSerialPush(mspPort_t *mspPort, uint8_t cmd, uint8_t *data, int datalen, m
 
     return ret; // return the number of bytes written
 }
+
+void mspDebugData(const uint8_t* data, uint16_t len) {
+
+
+    mspSerialPush(debugPort, MSP_DEBUGMSG, (uint8_t*)data, len, MSP_DIRECTION_REPLY);
+}
+
 static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
     switch (cmdMSP) {
     case MSP_BATTERY_CONFIG: //TODO
@@ -219,13 +229,15 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         sbufWriteU16(dst, 0); // send current in 0.01 A steps, range is -320A to 320A
         sbufWriteU16(dst, 0);
         break;
-    case MSP_DEBUG:{
+    case MSP_DEBUG: {
         int16_t debug[4]; //todo
         for (int i = 0; i < 4; i++) {
             sbufWriteU16(dst, debug[i]);      // 4 variables are here for general monitoring purpose
         }
         break;
     }
+    case MSP_DEBUGMSG:
+        break;
     case MSP_UID:
         sbufWriteU32(dst, 0);
         sbufWriteU32(dst, 1);
@@ -244,7 +256,7 @@ static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
     //const unsigned int dataSize = sbufBytesRemaining(src);
     switch (cmdMSP) {
     case MSP_SET_RAW_RC:
-           //todo
+        //todo
         break;
     default:
         // we do not know how to handle the (valid) message, indicate error MSP $M!

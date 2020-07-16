@@ -7,6 +7,7 @@
 
 #include "drivers/serial.h"
 #include "msp/msp.h"
+#include "common/debug.h"
 
 #define LED_ROT PIN_PA24
 #define LED_GELB PIN_PB02
@@ -37,6 +38,9 @@ int main(void) {
 
     mspPort_t mspPort;
     mspInit(&mspPort, &serialInstance);
+    initMspDebugPort(&mspPort);
+    initDebug(&mspDebugData);
+
 
 
     /*Enable the system interrupts*/
@@ -51,10 +55,14 @@ int main(void) {
     port_pin_set_config(LED_GRUEN, &config_prt_pin);
 
     port_pin_set_output_level(LED_ROT, true);
-    mspSerialPush(&mspPort, 1, 0, 0, MSP_DIRECTION_REQUEST);
-    /************************** Infinite Loop *******************************/
-    while (true) {
 
+
+    printDebug("\r\n\n------- Debug Build -------\n\n\r");
+    /************************** Infinite Loop *******************************/
+    int i = 0;
+    char str[256];
+
+    while (true) {
     } /* !while (true) */
 
 }

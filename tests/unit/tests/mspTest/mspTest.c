@@ -8,37 +8,12 @@
 #include "msp/msp_protocol.h"
 
 #include "common/fc.h"
-#define BUFFER_SIZE 256
-uint8_t rxBuffer[BUFFER_SIZE];
-uint8_t txBuffer[BUFFER_SIZE];
+#include "common/debug.h"
 /**
  * do not send any data
  * @param instance
  */
 static void dummySerialWrite(serialPort_t *instance) {
-}
-
-/**
- * clear test buffer
- */
-static void clearBuffer(void) {
-    memset(rxBuffer, 0, BUFFER_SIZE);
-    memset(txBuffer, 0, BUFFER_SIZE);
-}
-
-static void initSerial(serialPort_t *instance) {
-    clearBuffer();
-    instance->txBuffer = txBuffer;
-    instance->txBufferHead = 0;
-    instance->txBufferTail = 0;
-    instance->txBufferSize = BUFFER_SIZE;
-    instance->rxBuffer = rxBuffer;
-
-    instance->rxBufferHead = 0;
-    instance->rxBufferTail = 0;
-    instance->rxBufferSize = BUFFER_SIZE;
-
-    instance->serialWrite = dummySerialWrite;
 }
 
 /**
@@ -53,6 +28,21 @@ static void writeRxBuffer(serialPort_t *instance, uint8_t ch) {
     } else {
         instance->rxBufferHead++;
     }
+}
+/**
+ * read byte from tx Buffer
+ * @param instance
+ * @return
+ */
+static uint8_t readTxBuffer(serialPort_t *instance) {
+    uint8_t ch = instance->txBuffer[instance->txBufferTail];
+    if (instance->txBufferTail + 1 >= instance->txBufferSize) {
+        instance->txBufferTail = 0;
+    } else {
+        instance->txBufferTail++;
+    }
+    //printf("Read: %c [0x%x]\n", ch, ch);
+    return ch;
 }
 
 /**
@@ -74,7 +64,7 @@ static void generateRequest(uint8_t cmd, mspPort_t *mspPort) {
  */
 static void test_simple(void) {
     serialPort_t testSerial;
-    initSerial(&testSerial);
+    initSerial(&testSerial, &dummySerialWrite);
     mspPort_t mspPort;
     mspInit(&mspPort, &testSerial);
 
@@ -114,7 +104,7 @@ static void test_simple(void) {
  */
 static void test_push_msp(void) {
     serialPort_t testSerial;
-    initSerial(&testSerial);
+    initSerial(&testSerial, &dummySerialWrite);
 
     mspPort_t mspPort;
     mspInit(&mspPort, &testSerial);
@@ -122,16 +112,15 @@ static void test_push_msp(void) {
     mspSerialPush(&mspPort, MSP_API_VERSION, 0, 0, MSP_DIRECTION_REQUEST);
 
     bool ok = true;
-    ok &= (txBuffer[0] == '$');
-    ok &= (txBuffer[1] == 'M');
-    ok &= (txBuffer[2] == '>');
-    ok &= (txBuffer[3] == 0);
-    ok &= (txBuffer[4] == MSP_API_VERSION);
-    ok &= (txBuffer[5] == 1);
+    ok &= (readTxBuffer(&testSerial) == '$');
+    ok &= (readTxBuffer(&testSerial) == 'M');
+    ok &= (readTxBuffer(&testSerial) == '>');
+    ok &= (readTxBuffer(&testSerial) == 0);
+    ok &= (readTxBuffer(&testSerial) == MSP_API_VERSION);
+    ok &= (readTxBuffer(&testSerial) == 1);
 
     sput_fail_unless(ok, "MSP_API_VERSION Request OK");
     testSerial.txBufferTail = testSerial.txBufferHead = 0; //Reset Buffer
-    clearBuffer();
 
     uint8_t data[3] = { 'A', 'B', 'C' };
     uint8_t crc = 0;
@@ -142,22 +131,6 @@ static void test_push_msp(void) {
     crc ^= data[2];
 
     sput_fail_unless(ok, "MSP_API_VERSION REPLY OK");
-}
-
-/**
- * read byte from tx Buffer
- * @param instance
- * @return
- */
-static uint8_t readTxBuffer(serialPort_t *instance) {
-    uint8_t ch = instance->txBuffer[instance->txBufferTail];
-    if (instance->txBufferTail + 1 >= instance->txBufferSize) {
-        instance->txBufferTail = 0;
-    } else {
-        instance->txBufferTail++;
-    }
-    //printf("Read: %c [0x%x]\n", ch, ch);
-    return ch;
 }
 
 /**
@@ -269,8 +242,7 @@ static void testReplyOfCommand(uint8_t cmd, mspPort_t *mspPort) {
 
 static void test_reply(void) {
     serialPort_t testSerial;
-
-    initSerial(&testSerial);
+    initSerial(&testSerial, &dummySerialWrite);
     mspPort_t mspPort;
     mspInit(&mspPort, &testSerial);
     generateRequest(MSP_API_VERSION, &mspPort);
@@ -309,6 +281,23 @@ static void test_MSP_FC_VERSION(void) {
     testReplyOfCommand(MSP_FC_VERSION, &commandMspPort);
 }
 
+static void test_mspDebug(void) {
+    serialPort_t testSerial;
+    initSerial(&testSerial, &dummySerialWrite);
+    mspPort_t mspPort;
+    mspInit(&mspPort, &testSerial);
+
+    initMspDebugPort(&mspPort);
+    initDebug(&mspDebugData);
+
+    printDebug("test");
+    uint8_t data[6] = { 4, MSP_DEBUGMSG, 't', 'e', 's','t' };
+
+    bool ok = checkReply(mspPort.port, data, 6);
+    sput_fail_unless(ok, "REPLY");
+    sput_fail_unless(mspPort.c_state == MSP_IDLE, "MSP_IDLE");
+}
+
 int main(int argc, char *argv[]) {
     sput_start_testing()
     ;
@@ -322,8 +311,11 @@ int main(int argc, char *argv[]) {
     sput_enter_suite("Test reply");
     sput_run_test(test_reply);
 
+    sput_enter_suite("Test MSP_DEBUG");
+    sput_run_test(test_mspDebug);
+
     //test Commands with one Port
-    initSerial(&commandSerialPort);
+    initSerial(&commandSerialPort, &dummySerialWrite);
     mspInit(&commandMspPort, &commandSerialPort);
 
     sput_enter_suite("Test MSP_API_VERSION");
@@ -334,7 +326,6 @@ int main(int argc, char *argv[]) {
 
     sput_enter_suite("Test MSP_FC_VERSION");
     sput_run_test(test_MSP_FC_VERSION);
-
 
     sput_finish_testing()
     ;

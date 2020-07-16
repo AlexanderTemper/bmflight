@@ -11,6 +11,7 @@
 #define MSP_ANALOG 110
 #define MSP_UID 160
 #define MSP_FEATURE_CONFIG 36
+#define MSP_DEBUGMSG 253
 #define MSP_DEBUG 254
 #define MSP_SET_RAW_RC 200
 #define MSP_BUILD_INFO 5
