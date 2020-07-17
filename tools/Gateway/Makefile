@@ -1,40 +1,14 @@
+APP_NAME := gateway
+FC_SRC_DIR := ../../src/
 
-APP_NAME = BMF055FlightController
+BUILD_DIR := build
+EXE_FILE := bin/$(APP_NAME).out
 
-
-EXE_FILE = bin/$(APP_NAME).out
-
-TARGET = BMF055
-BUILD_DIR := build/
-
-# Choose target MCU
-ifeq ($(TARGET),$(filter $(TARGET),SITL))
-TARGET_MCU := SITL
-SIMULATOR_BUILD = yes
-
-else ifeq ($(TARGET),BMF055)
-TARGET_MCU := SAMD20J18
-
-else
-$(error Unknown target MCU specified.)
-endif
-
-
-# Include target makefile
-include ./make/mcu/$(TARGET_MCU).mk
-
-INC_PATH += \
-	src
-# List of C source files.
-CSRCS += \
-	src/main.c	           \
-	src/common/debug.c     \
-	src/common/streambuf.c \
-	src/io/serial.c        \
-	src/msp/msp.c
-
-# Add inlcude paths to preprocessor
-CPPFLAGS  += $(foreach INC,$(addprefix ./,$(INC_PATH)),-I$(INC))
+MSG_MKDIR = "MKDIR   $(dir $@)"
+#------------------------------ Compiler --------------------------------
+CC := gcc
+#------------------------------ Linker ----------------------------------
+LD := gcc
 
 # Dependency file flags.
 DEPFLAGS = -MD -MP -MQ $@
@@ -75,50 +49,45 @@ CFLAGS += -Wunreachable-code
 CFLAGS += -Wcast-align
 CFLAGS += --param max-inline-insns-single=500
 
-# To reduce application size use only integer printf function.
-CFLAGS += -Dprintf=iprintf
+# Include PATHS
+INC_PATH := \
+	$(FC_SRC_DIR)
+	
+# Files to build for source
+CSRCS := main.c
+CSRCS_FC_SRC := \
+	common/streambuf.c \
+	io/serial.c \
+	msp/msp.c \
+	common/debug.c \
+	
+	# Include PATHS
+INC_PATH += $(TEST_FRAMEWORK) 
 
-# Use newlib-nano to reduce application size
-LDFLAGS += --specs=nano.specs
-LDFLAGS += -Wl,--print-memory-usage
+# Add inlcude paths to preprocessor
+CPPFLAGS  += $(foreach INC,$(addprefix ./,$(INC_PATH)),-I$(INC))
 
-MSG_MKDIR = "MKDIR   $(dir $@)"
-
+obj-y := $(addprefix $(BUILD_DIR)/, $(addsuffix .o,$(basename $(CSRCS_FC_SRC))))	
 
 # Create object files list from source files list.
-obj-y := $(addprefix $(BUILD_DIR), $(addsuffix .o,$(basename $(CSRCS))))
+obj-y += $(addprefix $(BUILD_DIR)/, $(addsuffix .o,$(basename $(CSRCS))))
 
-
-.PHONY: all debug release clean
-all: debug
-
-	
-	
-############### DEBUG BUILD ###########
-debug:  CFLAGS += -DEBUG -O0 -g3 -gdwarf-2
-debug::
-	@echo "=========== Debug build for $(APP_NAME) ===="
-debug:: $(EXE_FILE)
-
-
-############## RELEASE BUILD ############
-release:  CFLAGS += -DNDEBUG -flto -fuse-linker-plugin -ffast-math -Ofast
-release::
-	@echo "=========== Release Build for $(APP_NAME) ===="
-release:: $(EXE_FILE)
+all: $(EXE_FILE)
 
 # Link
 $(EXE_FILE): $(obj-y)
-	@echo "Linking" $@
 	@$(LD) -o $@ $(obj-y) $(LDFLAGS) $(LDLIBS)
-	$(SIZE) $(EXE_FILE)
-	$(SIZE) -Ax $@
-	$(SIZE) -Bx $@
 	
-$(BUILD_DIR)%.o: %.c
+
+$(BUILD_DIR)/%.o: %.c
 	@test -d $(dir $@) || mkdir -p $(dir $@)
 	@$(CC) $(DEPFLAGS) $(CPPFLAGS) $(CFLAGS)  -c $< -o $@
-
+	
+	
+$(BUILD_DIR)/%.o: $(FC_SRC_DIR)/%.c
+	@test -d $(dir $@) || mkdir -p $(dir $@)
+	@$(CC) $(DEPFLAGS) $(CPPFLAGS) $(CFLAGS)  -c $< -o $@
+	
+	
 clean:
 	rm -rf $(BUILD_DIR)
-	

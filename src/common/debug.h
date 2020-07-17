@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platform.h"
+#include "global.h"
 
 typedef void (*sendDebugFuncPtr)(const uint8_t* data, uint16_t len);
 

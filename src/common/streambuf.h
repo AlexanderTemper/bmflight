@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "platform.h"
+#include "global.h"
 
 // simple buffer-based serializer/deserializer without implicit size check
 

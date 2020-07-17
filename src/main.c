@@ -1,68 +1,45 @@
-#include "asf.h"
-
-#include "clock_support.h"
-#include "spi_support.h"
-#include "tc_support.h"
-#include "usart_support.h"
-
-#include "drivers/serial.h"
 #include "msp/msp.h"
 #include "common/debug.h"
 
-#define LED_ROT PIN_PA24
-#define LED_GELB PIN_PB02
-#define LED_GRUEN PIN_PA28
+#include "platform.h"
+
+//#define LED_ROT PIN_PA24
+//#define LED_GELB PIN_PB02
+//#define LED_GRUEN PIN_PA28
 
 int main(void) {
     /********************* Initialize global variables **********************/
 
-    uint16_t timer = 0;
+    //uint16_t timer = 0;
     /************************* Initializations ******************************/
 
-    /*Initialize SAMD20 MCU*/
-    system_init();
 
-    /*Initialize clock module of SAMD20 MCU - Internal RC clock*/
-    clock_initialize();
-
-    /*SPI master for communicating with sensors*/
-    spi_initialize();
-
-    /*Initialize timers */
-    tc_initialize();
+    platform_initialize();
 
     /*Initialize MSP */
-    serialPort_t serialInstance;
-    initSerial(&serialInstance, &mspSerialUartWriteCallback);
-    usart_initialize(&serialInstance);
+    serial_initialize();
+    msp_initialize();
 
-    mspPort_t mspPort;
-    mspInit(&mspPort, &serialInstance);
-    initMspDebugPort(&mspPort);
-    initDebug(&mspDebugData);
-
-
-
-    /*Enable the system interrupts*/
-    system_interrupt_enable_global();/* All interrupts have a priority of level 0 which is the highest. */
+//    mspPort_t mspPort;
+//    mspInit(&mspPort, &serialInstance);
+//    initMspDebugPort(&mspPort);
+    interrupt_enable();
 
     // led inti
-    struct port_config config_prt_pin;
-    port_get_config_defaults(&config_prt_pin);
-    config_prt_pin.direction = PORT_PIN_DIR_OUTPUT;
-    port_pin_set_config(LED_ROT, &config_prt_pin);
-    port_pin_set_config(LED_GELB, &config_prt_pin);
-    port_pin_set_config(LED_GRUEN, &config_prt_pin);
+//    struct port_config config_prt_pin;
+//    port_get_config_defaults(&config_prt_pin);
+//    config_prt_pin.direction = PORT_PIN_DIR_OUTPUT;
+//    port_pin_set_config(LED_ROT, &config_prt_pin);
+//    port_pin_set_config(LED_GELB, &config_prt_pin);
+//    port_pin_set_config(LED_GRUEN, &config_prt_pin);
+//
+//    port_pin_set_output_level(LED_ROT, true);
 
-    port_pin_set_output_level(LED_ROT, true);
 
-
-    printDebug("\r\n\n------- Debug Build -------\n\n\r");
     /************************** Infinite Loop *******************************/
-    int i = 0;
-    char str[256];
-
+    printDebug("\r\n\n------- Debug Build 3 -------\n\n\r");
     while (true) {
+        processMSP();
     } /* !while (true) */
 
 }

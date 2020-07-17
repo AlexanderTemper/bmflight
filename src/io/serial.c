@@ -1,22 +1,5 @@
 #include "serial.h"
 
-#define BUFFER_SIZE 256
-static uint8_t rxBuffer[BUFFER_SIZE];
-static uint8_t txBuffer[BUFFER_SIZE];
-
-void initSerial(serialPort_t *instance,void (*serialWriteFnPtr)(serialPort_t *instance)) {
-    instance->txBuffer = txBuffer;
-    instance->txBufferHead = 0;
-    instance->txBufferTail = 0;
-    instance->txBufferSize = BUFFER_SIZE;
-    instance->rxBuffer = rxBuffer;
-
-    instance->rxBufferHead = 0;
-    instance->rxBufferTail = 0;
-    instance->rxBufferSize = BUFFER_SIZE;
-    instance->serialWrite = serialWriteFnPtr;
-}
-
 void serialPrint(serialPort_t *instance, const char *str) {
     uint8_t ch;
     while ((ch = *(str++)) != 0) {
@@ -35,7 +18,7 @@ void serialWrite(serialPort_t *instance, uint8_t ch) {
 
     if (!instance->blockWriteToHW) {
         // call serial to start transmission
-        instance->serialWrite(instance);
+        instance->triggerWrite();
     }
 }
 
@@ -115,6 +98,6 @@ void serialBeginWrite(serialPort_t *instance) {
 void serialEndWrite(serialPort_t *instance) {
     instance->blockWriteToHW = false;
     // trigger transmission
-    instance->serialWrite(instance);
+    instance->triggerWrite();
 }
 

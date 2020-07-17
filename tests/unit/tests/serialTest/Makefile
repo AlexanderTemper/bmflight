@@ -12,7 +12,7 @@ include $(UNIT_TEST_DIR)/test_common.mk
 
 # Files to build for source
 CSRCS_SRC := \
-	src/drivers/serial.c \
+	src/io/serial.c \
 	
 	
 obj-y := $(addprefix $(BUILD_DIR)/$(APP_NAME)/, $(addsuffix .o,$(basename $(CSRCS_SRC))))	

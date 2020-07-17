@@ -78,7 +78,8 @@ INC_PATH += \
 	$(SAMD_LIB_PATH)               \
 	$(SAMD_LIB_PATH)/ASF_Support   \
 	$(SAMD_LIB_PATH)/drivers       \
-	$(ASF_INC_PATH)           
+	$(ASF_INC_PATH)                \
+	src/drivers/SAMD20J18 		     
 	
 
 # List of C source files.
@@ -88,13 +89,17 @@ CSRCS += \
 	$(SAMD_LIB_PATH)/ASF_Support/spi_support.c   \
 	$(SAMD_LIB_PATH)/ASF_Support/i2c_support.c   \
 	$(SAMD_LIB_PATH)/ASF_Support/tc_support.c    \
-	$(SAMD_LIB_PATH)/ASF_Support/usart_support.c \
 	$(SAMD_LIB_PATH)/drivers/bma2x2_support.c    \
 	$(SAMD_LIB_PATH)/drivers/bma2x2.c            \
 	$(SAMD_LIB_PATH)/drivers/bmg160_support.c    \
 	$(SAMD_LIB_PATH)/drivers/bmg160.c            \
 	$(SAMD_LIB_PATH)/drivers/bmm050_support.c    \
 	$(SAMD_LIB_PATH)/drivers/bmm050.c
+	
+	
+CSRCS += \
+	src/drivers/SAMD20J18/serial.c  \
+	src/drivers/SAMD20J18/platform.c
 
 #------------------------------ Compiler --------------------------------
 CC := arm-none-eabi-gcc

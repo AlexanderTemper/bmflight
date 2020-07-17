@@ -3,7 +3,7 @@
 
 #include "sput.h"
 
-#include "drivers/serial.h"
+#include "io/serial.h"
 #include "common/utils.h"
 #include "stopWatch.h"
 
@@ -30,40 +30,7 @@ static bool testArray(uint8_t *first, uint8_t *second, int length) {
  * do not send any data
  * @param instance
  */
-static void dummySerialWrite(serialPort_t *instance) {
-}
-
-/**
- * data is send instant
- * @param instance
- */
-static void instantSerialWrite(serialPort_t *instance) {
-    instance->txBufferTail = instance->txBufferHead;
-}
-
-/**
- * send data after ~ 200us
- * @param instance
- */
-static void emulateTransmit(serialPort_t *instance) {
-    static stopWatch_t watch;
-    // nothing to transmit
-    if (instance->txBufferHead == instance->txBufferTail) {
-        return;
-    }
-
-    if (!watch.running) {
-        startTimer(&watch); // start timer
-    }
-
-    if (getTimeUsec(&watch) > 200) { //200us
-        if (instance->txBufferHead > instance->txBufferTail) {
-            instance->txBufferTail = instance->txBufferHead;
-        } else {
-            instance->txBufferTail = 0;
-        }
-        startTimer(&watch); // start timer
-    }
+static void dummySerialWrite(void) {
 }
 
 uint8_t rxBuffer[BUFFER_SIZE];
@@ -81,7 +48,7 @@ static void test_buffer_wrap(void) {
     testSerial.txBufferTail = 0;
     testSerial.txBufferSize = BUFFER_SIZE;
 
-    testSerial.serialWrite = dummySerialWrite;
+    testSerial.triggerWrite = dummySerialWrite;
 
     //fill whole Buffer
     uint8_t d = 1;
@@ -120,69 +87,99 @@ static void test_buffer_wrap(void) {
     sput_fail_unless(testSerial.txBufferTail == BUFFER_SIZE / 2, "txBufferTail");
 }
 
-/**
- * test serialWrite with fake write callback
- */
-static void test_running(void) {
-    serialPort_t testSerial;
-    testSerial.txBuffer = txBuffer;
-    testSerial.txBufferHead = 0;
-    testSerial.txBufferTail = 0;
-    testSerial.txBufferSize = BUFFER_SIZE;
-
-    //Data is send after 200uS
-    testSerial.serialWrite = emulateTransmit;
-
-    // send Some Data
-    serialWrite(&testSerial, 'a');
-    serialWrite(&testSerial, 'a');
-
-    sput_fail_unless(testSerial.txBufferHead == 2, "txBufferHead");
-    sput_fail_unless(testSerial.txBufferTail == 0, "txBufferTail");
-    sput_fail_unless(serialTxBytesFree(&testSerial) == BUFFER_SIZE-3, "data before wait");
-    while (serialTxBytesFree(&testSerial) < BUFFER_SIZE - 1) { // wait for transmit fake
-        emulateTransmit(&testSerial); //gets called by HW
-    }
-    sput_fail_unless(testSerial.txBufferHead == 2, "txBufferHead");
-    sput_fail_unless(testSerial.txBufferTail == 2, "txBufferTail");
-}
-
 uint8_t testBlock[4] = { 'T', 'E', 'S', 'T' };
-
+serialPort_t testSerial2;
+/**
+ * data is send instant
+ * @param instance
+ */
+static void instantSerialWrite(void) {
+    testSerial2.txBufferTail = testSerial2.txBufferHead;
+}
 /**
  * test read of rx buffer
  */
 static void test_block_write(void) {
-
-    serialPort_t testSerial;
-    testSerial.txBuffer = txBuffer;
-    testSerial.txBufferHead = 0;
-    testSerial.txBufferTail = 0;
-    testSerial.txBufferSize = BUFFER_SIZE;
-
+    testSerial2.txBuffer = txBuffer;
+    testSerial2.txBufferHead = 0;
+    testSerial2.txBufferTail = 0;
+    testSerial2.txBufferSize = BUFFER_SIZE;
     //data is send instant
-    testSerial.serialWrite = instantSerialWrite;
+    testSerial2.triggerWrite = instantSerialWrite;
 
-    serialBeginWrite(&testSerial);
-    serialWriteBuf(&testSerial, testBlock, 4);
-    sput_fail_unless(testSerial.txBufferHead == 4, "txBufferHead");
-    sput_fail_unless(testSerial.txBufferTail == 0, "txBufferTail");
-    sput_fail_unless(serialTxBytesFree(&testSerial) == BUFFER_SIZE-5, "Buffer Size");
+    serialBeginWrite(&testSerial2);
+    serialWriteBuf(&testSerial2, testBlock, 4);
+    sput_fail_unless(testSerial2.txBufferHead == 4, "txBufferHead");
+    sput_fail_unless(testSerial2.txBufferTail == 0, "txBufferTail");
+    sput_fail_unless(serialTxBytesFree(&testSerial2) == BUFFER_SIZE-5, "Buffer Size");
     sput_fail_unless(testArray(txBuffer, testBlock, 4), "test buffer");
-    serialEndWrite(&testSerial);
-    sput_fail_unless(testSerial.txBufferHead == 4, "txBufferHead");
-    sput_fail_unless(testSerial.txBufferTail == 4, "txBufferTail");
-    sput_fail_unless(isSerialTransmitBufferEmpty(&testSerial), "Buffer empty");
+    serialEndWrite(&testSerial2);
+    sput_fail_unless(testSerial2.txBufferHead == 4, "txBufferHead");
+    sput_fail_unless(testSerial2.txBufferTail == 4, "txBufferTail");
+    sput_fail_unless(isSerialTransmitBufferEmpty(&testSerial2), "Buffer empty");
 
-    serialWrite(&testSerial,'a');
-    sput_fail_unless(isSerialTransmitBufferEmpty(&testSerial), "Buffer empty");
+    serialWrite(&testSerial2, 'a');
+    sput_fail_unless(isSerialTransmitBufferEmpty(&testSerial2), "Buffer empty");
 
-    serialBeginWrite(&testSerial);
-    serialWrite(&testSerial,'a');
-    sput_fail_if(isSerialTransmitBufferEmpty(&testSerial), "Buffer is empty");
-    serialEndWrite(&testSerial);
-    sput_fail_unless(isSerialTransmitBufferEmpty(&testSerial), "Buffer empty");
+    serialBeginWrite(&testSerial2);
+    serialWrite(&testSerial2, 'a');
+    sput_fail_if(isSerialTransmitBufferEmpty(&testSerial2), "Buffer is empty");
+    serialEndWrite(&testSerial2);
+    sput_fail_unless(isSerialTransmitBufferEmpty(&testSerial2), "Buffer empty");
 }
+
+serialPort_t testSerial3;
+
+/**
+ * send data after ~ 200us
+ * @param instance
+ */
+static void emulateTransmit(void) {
+    static stopWatch_t watch;
+    // nothing to transmit
+    if (testSerial3.txBufferHead == testSerial3.txBufferTail) {
+        return;
+    }
+
+    if (!watch.running) {
+        startTimer(&watch); // start timer
+    }
+
+    if (getTimeUsec(&watch) > 200) { //200us
+        if (testSerial3.txBufferHead > testSerial3.txBufferTail) {
+            testSerial3.txBufferTail = testSerial3.txBufferHead;
+        } else {
+            testSerial3.txBufferTail = 0;
+        }
+        startTimer(&watch); // start timer
+    }
+}
+/**
+ * test serialWrite with fake write callback
+ */
+static void test_running(void) {
+    testSerial3.txBuffer = txBuffer;
+    testSerial3.txBufferHead = 0;
+    testSerial3.txBufferTail = 0;
+    testSerial3.txBufferSize = BUFFER_SIZE;
+
+    //Data is send after 200uS
+    testSerial3.triggerWrite = emulateTransmit;
+
+    // send Some Data
+    serialWrite(&testSerial3, 'a');
+    serialWrite(&testSerial3, 'a');
+
+    sput_fail_unless(testSerial3.txBufferHead == 2, "txBufferHead");
+    sput_fail_unless(testSerial3.txBufferTail == 0, "txBufferTail");
+    sput_fail_unless(serialTxBytesFree(&testSerial3) == BUFFER_SIZE-3, "data before wait");
+    while (serialTxBytesFree(&testSerial3) < BUFFER_SIZE - 1) { // wait for transmit fake
+        emulateTransmit(); //gets called by HW
+    }
+    sput_fail_unless(testSerial3.txBufferHead == 2, "txBufferHead");
+    sput_fail_unless(testSerial3.txBufferTail == 2, "txBufferTail");
+}
+
 /**
  * write a byte to the rx Buffer
  * @param instance

@@ -2,20 +2,62 @@
 #include <unistd.h>
 
 #include "sput.h"
-
-#include "drivers/serial.h"
+#include "fc.h"
+#include "io/serial.h"
 #include "msp/msp.h"
 #include "msp/msp_protocol.h"
 
-#include "common/fc.h"
 #include "common/debug.h"
+
+#define BUFFER_SIZE 256
+static uint8_t rxBuffer[BUFFER_SIZE];
+static uint8_t txBuffer[BUFFER_SIZE];
+
 /**
  * do not send any data
  * @param instance
  */
-static void dummySerialWrite(serialPort_t *instance) {
+static void dummySerialWrite(void) {
 }
 
+/**
+ * @param cmd
+ * @param reply
+ * @return
+ */
+static mspResult_e mspFcProcessCommand(mspPacket_t *cmd, mspPacket_t *reply) {
+    int ret = MSP_RESULT_ACK;
+    sbuf_t *dst = &reply->buf;
+    sbuf_t *src = &cmd->buf;
+    const uint8_t cmdMSP = cmd->cmd;
+    // initialize reply by default
+    reply->cmd = cmd->cmd;
+    switch (cmdMSP) {
+    case MSP_API_VERSION:
+        sbufWriteU8(dst, MSP_PROTOCOL_VERSION);
+        sbufWriteU8(dst, API_VERSION_MAJOR);
+        sbufWriteU8(dst, API_VERSION_MINOR);
+        break;
+    default:
+        sput_fail_unless(false, "command known");
+        break;
+    }
+    reply->result = MSP_RESULT_ACK;
+    return ret;
+}
+
+static void initSerial(serialPort_t *instance) {
+    instance->txBuffer = txBuffer;
+    instance->txBufferHead = 0;
+    instance->txBufferTail = 0;
+    instance->txBufferSize = BUFFER_SIZE;
+    instance->rxBuffer = rxBuffer;
+
+    instance->rxBufferHead = 0;
+    instance->rxBufferTail = 0;
+    instance->rxBufferSize = BUFFER_SIZE;
+    instance->triggerWrite = dummySerialWrite;
+}
 /**
  * write a byte to the rx Buffer
  * @param instance
@@ -64,8 +106,9 @@ static void generateRequest(uint8_t cmd, mspPort_t *mspPort) {
  */
 static void test_simple(void) {
     serialPort_t testSerial;
-    initSerial(&testSerial, &dummySerialWrite);
+    initSerial(&testSerial);
     mspPort_t mspPort;
+    mspPort.mspProcessCommandFnPtr = &mspFcProcessCommand;
     mspInit(&mspPort, &testSerial);
 
     //send MSP_API_VERSION over MSP V1
@@ -104,9 +147,10 @@ static void test_simple(void) {
  */
 static void test_push_msp(void) {
     serialPort_t testSerial;
-    initSerial(&testSerial, &dummySerialWrite);
+    initSerial(&testSerial);
 
     mspPort_t mspPort;
+    mspPort.mspProcessCommandFnPtr = &mspFcProcessCommand;
     mspInit(&mspPort, &testSerial);
 
     mspSerialPush(&mspPort, MSP_API_VERSION, 0, 0, MSP_DIRECTION_REQUEST);
@@ -114,23 +158,13 @@ static void test_push_msp(void) {
     bool ok = true;
     ok &= (readTxBuffer(&testSerial) == '$');
     ok &= (readTxBuffer(&testSerial) == 'M');
-    ok &= (readTxBuffer(&testSerial) == '>');
+    ok &= (readTxBuffer(&testSerial) == '<');
     ok &= (readTxBuffer(&testSerial) == 0);
     ok &= (readTxBuffer(&testSerial) == MSP_API_VERSION);
     ok &= (readTxBuffer(&testSerial) == 1);
 
     sput_fail_unless(ok, "MSP_API_VERSION Request OK");
     testSerial.txBufferTail = testSerial.txBufferHead = 0; //Reset Buffer
-
-    uint8_t data[3] = { 'A', 'B', 'C' };
-    uint8_t crc = 0;
-    crc ^= 3;
-    crc ^= MSP_API_VERSION;
-    crc ^= data[0];
-    crc ^= data[1];
-    crc ^= data[2];
-
-    sput_fail_unless(ok, "MSP_API_VERSION REPLY OK");
 }
 
 /**
@@ -242,8 +276,9 @@ static void testReplyOfCommand(uint8_t cmd, mspPort_t *mspPort) {
 
 static void test_reply(void) {
     serialPort_t testSerial;
-    initSerial(&testSerial, &dummySerialWrite);
+    initSerial(&testSerial);
     mspPort_t mspPort;
+    mspPort.mspProcessCommandFnPtr = &mspFcProcessCommand;
     mspInit(&mspPort, &testSerial);
     generateRequest(MSP_API_VERSION, &mspPort);
     mspProcess(&mspPort);
@@ -260,40 +295,48 @@ static void test_reply(void) {
     testReplyOfCommand(MSP_API_VERSION, &mspPort);
 }
 
-static serialPort_t commandSerialPort;
-static mspPort_t commandMspPort;
+//static serialPort_t commandSerialPort;
+//static mspPort_t commandMspPort;
 
-static void test_MSP_API_VERSION(void) {
-    generateRequest(MSP_API_VERSION, &commandMspPort);
-    mspProcess(&commandMspPort);
-    testReplyOfCommand(MSP_API_VERSION, &commandMspPort);
-}
+//static void test_MSP_API_VERSION(void) {
+//    generateRequest(MSP_API_VERSION, &commandMspPort);
+//    mspProcess(&commandMspPort);
+//    testReplyOfCommand(MSP_API_VERSION, &commandMspPort);
+//}
+//
+//static void test_MSP_FC_VARIANT(void) {
+//    generateRequest(MSP_FC_VARIANT, &commandMspPort);
+//    mspProcess(&commandMspPort);
+//    testReplyOfCommand(MSP_FC_VARIANT, &commandMspPort);
+//}
+//
+//static void test_MSP_FC_VERSION(void) {
+//    generateRequest(MSP_FC_VERSION, &commandMspPort);
+//    mspProcess(&commandMspPort);
+//    testReplyOfCommand(MSP_FC_VERSION, &commandMspPort);
+//}
 
-static void test_MSP_FC_VARIANT(void) {
-    generateRequest(MSP_FC_VARIANT, &commandMspPort);
-    mspProcess(&commandMspPort);
-    testReplyOfCommand(MSP_FC_VARIANT, &commandMspPort);
-}
-
-static void test_MSP_FC_VERSION(void) {
-    generateRequest(MSP_FC_VERSION, &commandMspPort);
-    mspProcess(&commandMspPort);
-    testReplyOfCommand(MSP_FC_VERSION, &commandMspPort);
-}
-
-static void test_mspDebug(void) {
+static void test_printDebug(void) {
     serialPort_t testSerial;
-    initSerial(&testSerial, &dummySerialWrite);
+    initSerial(&testSerial);
     mspPort_t mspPort;
+    mspPort.mspProcessCommandFnPtr = &mspFcProcessCommand;
     mspInit(&mspPort, &testSerial);
-
     initMspDebugPort(&mspPort);
     initDebug(&mspDebugData);
 
     printDebug("test");
-    uint8_t data[6] = { 4, MSP_DEBUGMSG, 't', 'e', 's','t' };
+    static uint8_t data[6] = { 4, MSP_DEBUGMSG, 't', 'e', 's', 't' }; //TOD warum muss hier static sein ?????
 
     bool ok = checkReply(mspPort.port, data, 6);
+    sput_fail_unless(ok, "REPLY");
+    sput_fail_unless(mspPort.c_state == MSP_IDLE, "MSP_IDLE");
+
+    static uint8_t testdata[3] = { 'A', 'B', 'C' };
+    static uint8_t data2[5] = { 3, MSP_DEBUGMSG, 'A', 'B', 'C' };
+    debugData(testdata, 3);
+
+    ok = checkReply(mspPort.port, data2, 5);
     sput_fail_unless(ok, "REPLY");
     sput_fail_unless(mspPort.c_state == MSP_IDLE, "MSP_IDLE");
 }
@@ -312,20 +355,7 @@ int main(int argc, char *argv[]) {
     sput_run_test(test_reply);
 
     sput_enter_suite("Test MSP_DEBUG");
-    sput_run_test(test_mspDebug);
-
-    //test Commands with one Port
-    initSerial(&commandSerialPort, &dummySerialWrite);
-    mspInit(&commandMspPort, &commandSerialPort);
-
-    sput_enter_suite("Test MSP_API_VERSION");
-    sput_run_test(test_MSP_API_VERSION);
-
-    sput_enter_suite("Test MSP_FC_VARIANT");
-    sput_run_test(test_MSP_FC_VARIANT);
-
-    sput_enter_suite("Test MSP_FC_VERSION");
-    sput_run_test(test_MSP_FC_VERSION);
+    sput_run_test(test_printDebug);
 
     sput_finish_testing()
     ;

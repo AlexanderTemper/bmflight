@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platform.h"
+#include "global.h"
 #include "common/streambuf.h"
 #include "common/time.h"
 
@@ -36,6 +36,7 @@ typedef struct mspPacket_s {
     uint8_t direction;
 } mspPacket_t;
 
+
 typedef struct mspPort_s {
     struct serialPort_s *port;
     timeMs_t lastActivityMs;
@@ -47,12 +48,15 @@ typedef struct mspPort_s {
     uint_fast16_t offset;
     uint_fast16_t dataSize;
     uint8_t checksum;
+    mspResult_e (*mspProcessCommandFnPtr)(mspPacket_t *cmd, mspPacket_t *reply);
+    void (*mspProcessReplyFnPtr)(mspPacket_t *cmd);
 } mspPort_t;
 
-typedef mspResult_e (*mspProcessCommandFnPtr)(mspPacket_t *cmd);
+
 
 void mspDebugData(const uint8_t* data, uint16_t len);
 void initMspDebugPort(mspPort_t *mspPort);
 void mspInit(mspPort_t *mspPort, struct serialPort_s *serialPort);
+
 void mspProcess(mspPort_t *port);
 int mspSerialPush(mspPort_t *mspPort, uint8_t cmd, uint8_t *data, int datalen, mspDirection_e direction);

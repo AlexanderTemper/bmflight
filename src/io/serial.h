@@ -1,16 +1,15 @@
 #pragma once
 
-#include "platform.h"
+#include "global.h"
 
 typedef struct serialPort_s serialPort_t;
 
 struct serialPort_s {
-
     // ringbuffer internals
     uint32_t rxBufferSize;
     uint32_t txBufferSize;
-    volatile uint8_t *rxBuffer;
-    volatile uint8_t *txBuffer;
+    uint8_t *rxBuffer;
+    uint8_t *txBuffer;
     // indicates the next free field in the buffer
     volatile uint32_t rxBufferHead;
     volatile uint32_t txBufferHead;
@@ -20,18 +19,9 @@ struct serialPort_s {
 
     // if true only the buffer gets filled by serialWrite can be enabled and disabled by serialBeginWrite and serialEndWrite
     bool blockWriteToHW;
-    // api calls
-    void (*serialWrite)(serialPort_t *instance);
+    void (*triggerWrite)(void);
 };
 
-
-typedef struct serialDevice_s {
-    serialPort_t port;
-    volatile uint8_t rxBuffer[64];
-    volatile uint8_t txBuffer[64];
-} serialDevice_t;
-
-void initSerial(serialPort_t *instance,void (*serialWriteFnPtr)(serialPort_t *instance));
 void serialWrite(serialPort_t *instance, uint8_t ch);
 void serialWriteBuf(serialPort_t *instance, const uint8_t *data, int count);
 uint8_t serialRead(serialPort_t *instance);

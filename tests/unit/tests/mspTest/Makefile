@@ -13,7 +13,7 @@ include $(UNIT_TEST_DIR)/test_common.mk
 # Files to build for source
 CSRCS_SRC := \
 	src/common/streambuf.c \
-	src/drivers/serial.c \
+	src/io/serial.c \
 	src/msp/msp.c \
 	src/common/debug.c \
 	

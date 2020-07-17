@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platform.h"
+#include "global.h"
 
 // millisecond time
 typedef uint32_t timeMs_t ;
