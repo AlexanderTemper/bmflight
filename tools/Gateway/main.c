@@ -190,7 +190,7 @@ int main(void) {
     mspInit(&mspPort, &serialInstance);
 
     while (1) {
-        mspSerialPush(&mspPort, MSP_API_VERSION, 0, 0, MSP_DIRECTION_REQUEST);
+        //mspSerialPush(&mspPort, MSP_API_VERSION, 0, 0, MSP_DIRECTION_REQUEST);
         serial_read();
         mspProcess(&mspPort);
     }

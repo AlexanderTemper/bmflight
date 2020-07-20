@@ -30,6 +30,7 @@ CSRCS += \
 	src/main.c	           \
 	src/common/debug.c     \
 	src/common/streambuf.c \
+	src/common/time.c      \
 	src/io/serial.c        \
 	src/msp/msp.c
 

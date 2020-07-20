@@ -4,13 +4,13 @@
 **************************************************************************
 * Copyright (C) 2015 Bosch Sensortec GmbH. All Rights Reserved.
 *
-* File:		spi_support.h
+* File:     spi_support.h
 *
-* Date:		2015/02/02
+* Date:     2015/02/02
 *
-* Revision:	1.0
+* Revision: 1.0
 *
-* Usage:	Part of BMF055 Data Stream Project
+* Usage:    Part of BMF055 Data Stream Project
 *
 **************************************************************************
 * \section License
@@ -57,10 +57,10 @@
 *************************************************************************/
 /*!
 *
-* @file		spi_support.h
-* @author	Bosch Sensortec
+* @file     spi_support.h
+* @author   Bosch Sensortec
 *
-* @brief	TC ASF Driver Support Header File
+* @brief    TC ASF Driver Support Header File
 *
 * TC support uses ASF timer/counter driver modules and defines
 * initialization, configuration and callback functions for
@@ -86,9 +86,9 @@
 /************************************************************************/
 
 /*! This is a value of 10 million that can be used to set SPI frequency to 10 MHz. */
-#define SPI_BAUDRATE_10M	UINT32_C(10000000)
+#define SPI_BAUDRATE_10M    UINT32_C(10000000)
 /*! The default value loaded onto SPI baud rate register is 10 MHz. */
-#define SPI_BAUDRATE		SPI_BAUDRATE_10M
+#define SPI_BAUDRATE        SPI_BAUDRATE_10M
 
 /************************************************************************/
 /* Global Variables                                                     */
@@ -104,37 +104,37 @@ extern struct spi_module spi_master_instance;
 
 
 /*!
-* @brief		Initializes SPI module of the MCU
+* @brief        Initializes SPI module of the MCU
 *
-* @param[in]	NULL
+* @param[in]    NULL
 *
-* @param[out]	NULL
+* @param[out]   NULL
 *
-* @return		NULL
+* @return       NULL
 *
 */
 void spi_initialize(void);
 
 /*!
-* @brief		Configures SPI master module of the MCU
+* @brief        Configures SPI master module of the MCU
 *
-* @param[in]	NULL
+* @param[in]    NULL
 *
-* @param[out]	NULL
+* @param[out]   NULL
 *
-* @return		NULL
+* @return       NULL
 *
 */
 void spi_configure_master(void);
 
 /*!
-* @brief		Configures an SPI slave
+* @brief        Configures an SPI slave
 *
-* @param[in]	ss_pin			SPI slave-select pin number
+* @param[in]    ss_pin          SPI slave-select pin number
 *
-* @param[out]	slave_inst_ptr	Pointer to the SPI slave software instance struct
+* @param[out]   slave_inst_ptr  Pointer to the SPI slave software instance struct
 *
-* @return		NULL
+* @return       NULL
 *
 */
 void spi_configure_slave(struct spi_slave_inst *slave_inst_ptr, uint8_t const ss_pin);

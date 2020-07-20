@@ -4,13 +4,13 @@
 **************************************************************************
 * Copyright (C) 2015 Bosch Sensortec GmbH. All Rights Reserved.
 *
-* File:		spi_support.c
+* File:     spi_support.c
 *
-* Date:		2015/02/02
+* Date:     2015/02/02
 *
-* Revision:	1.0
+* Revision: 1.0
 *
-* Usage:	Part of BMF055 Data Stream Project
+* Usage:    Part of BMF055 Data Stream Project
 *
 **************************************************************************
 * \section License
@@ -57,10 +57,10 @@
 *************************************************************************/
 /*!
 *
-* @file		spi_support.c
-* @author	Bosch Sensortec
+* @file     spi_support.c
+* @author   Bosch Sensortec
 *
-* @brief	Functions declared in spi_support.h file are defined here.
+* @brief    Functions declared in spi_support.h file are defined here.
 *
 *
 */
@@ -78,65 +78,65 @@ struct spi_module spi_master_instance;
 
 void spi_initialize(void)
 {
-	spi_configure_master();
+    spi_configure_master();
 }
 
 /*!
-* @brief		Configures SPI master module of the MCU
+* @brief        Configures SPI master module of the MCU
 *
-* @param[in]	NULL
+* @param[in]    NULL
 *
-* @param[out]	NULL
+* @param[out]   NULL
 *
-* @return		NULL
+* @return       NULL
 *
 */
 void spi_configure_master(void)
 {
-	/* SPI master's configuration structure */
-	struct spi_config config_spi_master;
-	
-	/* get SPI configuration defaults */
-	spi_get_config_defaults(&config_spi_master);
-	
-	/* set SPI Baudrate*/
-	config_spi_master.mode_specific.master.baudrate = SPI_BAUDRATE;
-	/* Configure pad 0 for data out (MOSI) */
-	config_spi_master.pinmux_pad0 = PINMUX_PA16C_SERCOM1_PAD0;
-	/* Configure pad 1 as clock (SCKL) */
-	config_spi_master.pinmux_pad1 = PINMUX_PA17C_SERCOM1_PAD1;
-	/* Configure pad 2 for unused */
-	config_spi_master.pinmux_pad2 = PINMUX_UNUSED;
-	/* Configure pad 3 for data in (MISO) */
-	config_spi_master.pinmux_pad3 = PINMUX_PA19C_SERCOM1_PAD3;
-	
-	/* initialize SERCOM1 as an SPI master */
-	spi_init(&spi_master_instance, SERCOM1, &config_spi_master);
-	/* enable the SPI module */
-	spi_enable(&spi_master_instance);
+    /* SPI master's configuration structure */
+    struct spi_config config_spi_master;
+
+    /* get SPI configuration defaults */
+    spi_get_config_defaults(&config_spi_master);
+
+    /* set SPI Baudrate*/
+    config_spi_master.mode_specific.master.baudrate = SPI_BAUDRATE;
+    /* Configure pad 0 for data out (MOSI) */
+    config_spi_master.pinmux_pad0 = PINMUX_PA16C_SERCOM1_PAD0;
+    /* Configure pad 1 as clock (SCKL) */
+    config_spi_master.pinmux_pad1 = PINMUX_PA17C_SERCOM1_PAD1;
+    /* Configure pad 2 for unused */
+    config_spi_master.pinmux_pad2 = PINMUX_UNUSED;
+    /* Configure pad 3 for data in (MISO) */
+    config_spi_master.pinmux_pad3 = PINMUX_PA19C_SERCOM1_PAD3;
+
+    /* initialize SERCOM1 as an SPI master */
+    spi_init(&spi_master_instance, SERCOM1, &config_spi_master);
+    /* enable the SPI module */
+    spi_enable(&spi_master_instance);
 }
 
 /*!
-* @brief		Configure and initialize software device instance of peripheral slave
+* @brief        Configure and initialize software device instance of peripheral slave
 *
-* @param[in]	ss_pin			SPI slave-select pin number
+* @param[in]    ss_pin          SPI slave-select pin number
 *
-* @param[out]	slave_inst_ptr	Pointer to the SPI slave software instance struct
+* @param[out]   slave_inst_ptr  Pointer to the SPI slave software instance struct
 *
-* @return		NULL
+* @return       NULL
 *
 */
 void spi_configure_slave(struct spi_slave_inst *slave_inst_ptr, uint8_t const ss_pin)
 {
-	/* SPI slave's configuration structure */
-	struct spi_slave_inst_config slave_config;
-	
-	/* get SPI slave's default configuration */
-	spi_slave_inst_get_config_defaults(&slave_config);
-	
-	/* Assign a slave slect pin */
-	slave_config.ss_pin = ss_pin;
-	
-	/* initialize the SPI slave instance */
-	spi_attach_slave(slave_inst_ptr, &slave_config);
+    /* SPI slave's configuration structure */
+    struct spi_slave_inst_config slave_config;
+
+    /* get SPI slave's default configuration */
+    spi_slave_inst_get_config_defaults(&slave_config);
+
+    /* Assign a slave slect pin */
+    slave_config.ss_pin = ss_pin;
+
+    /* initialize the SPI slave instance */
+    spi_attach_slave(slave_inst_ptr, &slave_config);
 }

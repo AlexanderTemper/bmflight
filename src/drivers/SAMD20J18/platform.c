@@ -1,21 +1,30 @@
-#include "platform.h"
-
+// driver includes
 #include "asf.h"
 #include "clock_support.h"
+#include "tc_support.h"
+#include "drivers/SAMD20J18/serial.h"
+
+// common includes
+#include "platform.h"
 #include "fc.h"
+#include "common/debug.h"
+#include "common/time.h"
 #include "io/serial.h"
 #include "msp/msp.h"
 #include "msp/msp_protocol.h"
-#include "drivers/SAMD20J18/serial.h"
-#include "common/debug.h"
 
+// variabels
 static serialPort_t serialInstance;
 static mspPort_t mspPort;
 
+// buffer for serial interface
 #define BUFFER_SIZE 256
 static uint8_t rxBuffer[BUFFER_SIZE];
 static uint8_t txBuffer[BUFFER_SIZE];
 
+/**
+ * callback function for writing data to the serial interface
+ */
 static void samd20j18_serial_writeCallback(void) {
     // nothing to transmit
     if (serialInstance.txBufferHead == serialInstance.txBufferTail) {
@@ -33,10 +42,11 @@ static void samd20j18_serial_writeCallback(void) {
     }
 }
 
-
+/**
+ * callback function called when data on the serial interface arrives
+ * @param data
+ */
 static void samd20j18_serial_readCallback(uint8_t data) {
-
-    //debugData(&data, 1);
     serialInstance.rxBuffer[serialInstance.rxBufferHead] = data;
     if (serialInstance.rxBufferHead + 1 >= serialInstance.rxBufferSize) {
         serialInstance.rxBufferHead = 0;
@@ -46,11 +56,10 @@ static void samd20j18_serial_readCallback(uint8_t data) {
 }
 
 void platform_initialize(void) {
-    /*Initialize SAMD20 MCU*/
     system_init();
-
-    /*Initialize clock module of SAMD20 MCU - Internal RC clock*/
     clock_initialize();
+    tc_initialize();
+    initTime(&millis_samd20j18, &micros_samd20j18);
 }
 
 void interrupt_enable(void) {
@@ -77,6 +86,12 @@ void serial_initialize(void) {
     //initDebug(&debugSerial);
 }
 
+/**
+ * generate response for command requestet on msp
+ * @param cmdMSP
+ * @param dst
+ * @return
+ */
 static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
     switch (cmdMSP) {
     case MSP_BATTERY_CONFIG: //TODO
@@ -159,6 +174,12 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
     return true;
 }
 
+/**
+ * msp commands for setting values
+ * @param cmdMSP
+ * @param src
+ * @return
+ */
 static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
     //const unsigned int dataSize = sbufBytesRemaining(src);
     switch (cmdMSP) {
@@ -174,7 +195,7 @@ static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
 }
 
 /**
- * default command
+ * function called when request on msp interface is received
  * @param cmd
  * @param reply
  * @return
@@ -196,7 +217,7 @@ static mspResult_e mspFcProcessCommand(mspPacket_t *cmd, mspPacket_t *reply) {
     return ret;
 }
 /**
- * default command
+ * function called when an reply is received on the msp interface
  */
 static void mspFcProcessReply(mspPacket_t *cmd) {
     //no Master so nothing to do here

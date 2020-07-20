@@ -218,5 +218,5 @@ int8_t bmg_spi_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t *rx_data, uint8_
 */
 void bmg_delay_msec(uint32_t msec)
 {
-	tc4_wait_for_msec(msec);
+    wait_for_msec(msec);
 }

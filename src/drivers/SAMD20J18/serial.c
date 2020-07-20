@@ -1,30 +1,25 @@
 #include "usart.h"
 #include "usart_interrupt.h"
-
 #include "drivers/SAMD20J18/serial.h"
 
 /*! value of 115200 that is used to set USART baud rate */
 #define USART_BAUDRATE_115200   UINT32_C(115200)
 /*! value of 9600 that is used to set USART baud rate */
-#define USART_BAUDRATE_9600 UINT32_C(9600)
+#define USART_BAUDRATE_9600     UINT32_C(9600)
 /*! loaded onto USART baud rate register initially */
 #define USART_BAUDRATE          USART_BAUDRATE_115200
 
-/*! SERCOM USART driver software instance structure, used to retain
- * software state information of the associated hardware module instance */
 static struct usart_module msp_usart_instance;
 
-/*! USART receive callback flag (set after each USART reception) */
-//static volatile bool usart_callback_receive_flag;
 /*! USART Rx byte */
 static uint16_t usart_rx_byte;
 static writeCallbackFuncPtr writeCallback;
 static readCallbackFuncPtr readCallback;
 //static volatile uint16_t rx_byte;
 
-/************************************************************************/
-/* Function Definitions                                                 */
-/************************************************************************/
+/**
+ * setup serial interface on for msp port
+ */
 static void msp_usart_configure(void) {
     /* USART's configuration structure */
     struct usart_config config_usart;
@@ -35,7 +30,7 @@ static void msp_usart_configure(void) {
     /* set USART Baudrate*/
     config_usart.baudrate = UINT32_C(115200);
     /* Set USART GCLK */
-    config_usart.generator_source = GCLK_GENERATOR_2;
+    config_usart.generator_source = GCLK_GENERATOR_3;
     /* Se USART MUX setting */
     config_usart.mux_setting = USART_RX_3_TX_2_XCK_3;
     /* Configure pad 0 for unused */
@@ -74,6 +69,12 @@ static void msp_usart_configure_callbacks(void) {
     usart_enable_callback(&msp_usart_instance, USART_CALLBACK_BUFFER_TRANSMITTED);
 }
 
+/**
+ * start new transmission or return with false if already running
+ * @param tx_data
+ * @param length
+ * @return
+ */
 bool samd20j18_serial_write(uint8_t *tx_data, uint16_t length) {
     //transmission already running
     if (msp_usart_instance.remaining_tx_buffer_length > 0) {
@@ -82,6 +83,11 @@ bool samd20j18_serial_write(uint8_t *tx_data, uint16_t length) {
     return STATUS_OK == usart_write_buffer_job(&msp_usart_instance, tx_data, length);
 }
 
+/**
+ * setup serial interface
+ * @param wp
+ * @param rp
+ */
 void samd20j18_serial_initialize(writeCallbackFuncPtr wp,readCallbackFuncPtr rp) {
     usart_rx_byte = 0;
     writeCallback = wp;

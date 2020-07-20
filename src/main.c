@@ -1,28 +1,18 @@
-#include "msp/msp.h"
-#include "common/debug.h"
-
 #include "platform.h"
+
+#include "common/debug.h"
+#include "common/time.h"
+
+
 
 //#define LED_ROT PIN_PA24
 //#define LED_GELB PIN_PB02
 //#define LED_GRUEN PIN_PA28
 
 int main(void) {
-    /********************* Initialize global variables **********************/
-
-    //uint16_t timer = 0;
-    /************************* Initializations ******************************/
-
-
     platform_initialize();
-
-    /*Initialize MSP */
     serial_initialize();
     msp_initialize();
-
-//    mspPort_t mspPort;
-//    mspInit(&mspPort, &serialInstance);
-//    initMspDebugPort(&mspPort);
     interrupt_enable();
 
     // led inti
@@ -36,10 +26,19 @@ int main(void) {
 //    port_pin_set_output_level(LED_ROT, true);
 
 
+    timeMs_t now = millis();
+    timeMs_t next = now + 1000;
+
     /************************** Infinite Loop *******************************/
     printDebug("\r\n\n------- Debug Build 3 -------\n\n\r");
     while (true) {
+        now = millis();
         processMSP();
-    } /* !while (true) */
+
+        if(now >= next){
+            next = now + 1000;
+            printDebug("\n1Sec");
+        }
+    }
 
 }
