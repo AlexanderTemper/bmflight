@@ -152,6 +152,7 @@ static mspResult_e mspFcProcessCommand(mspPacket_t *cmd, mspPacket_t *reply) {
     printf("mspFcProcessCommand\n");
     return MSP_RESULT_CMD_UNKNOWN;
 }
+
 /**
  * @param cmd
  * @param reply
@@ -169,6 +170,19 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
         uint8_t version_minor = sbufReadU8(src);
 
         printf("get Version Data %d %d %d\n", version, version_major, version_minor);
+        break;
+    }
+    case MSP_RAW_IMU: {
+        int16_t acc[3];
+        int16_t gyro[3];
+        for (int i = 0; i < 3; i++) {
+            acc[i] = sbufReadU16(src);
+        }
+
+        for (int i = 0; i < 3; i++) {
+            gyro[i] = sbufReadU16(src);
+        }
+        printf("get AccData [%d %d %d], GyroData [%d %d %d] \r", acc[X], acc[Y], acc[Z], gyro[X], gyro[Y], gyro[Z]);
         break;
     }
     case MSP_DEBUGMSG: {
@@ -190,7 +204,7 @@ int main(void) {
     mspInit(&mspPort, &serialInstance);
 
     while (1) {
-        //mspSerialPush(&mspPort, MSP_API_VERSION, 0, 0, MSP_DIRECTION_REQUEST);
+        mspSerialPush(&mspPort, MSP_RAW_IMU, 0, 0, MSP_DIRECTION_REQUEST);
         serial_read();
         mspProcess(&mspPort);
     }

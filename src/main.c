@@ -11,8 +11,16 @@
 
 int main(void) {
     platform_initialize();
+
     serial_initialize();
+
     msp_initialize();
+
+    sensor_initialize();
+
+
+
+
     interrupt_enable();
 
     // led inti
@@ -33,11 +41,17 @@ int main(void) {
     printDebug("\r\n\n------- Debug Build 3 -------\n\n\r");
     while (true) {
         now = millis();
+
+
+        sensor_read();
+
         processMSP();
+
+
 
         if(now >= next){
             next = now + 1000;
-            printDebug("\n1Sec");
+            //printDebug("\n 1Sec");
         }
     }
 

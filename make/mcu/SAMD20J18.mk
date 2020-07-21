@@ -115,9 +115,15 @@ CFLAGS = \
        -D USART_CALLBACK_MODE=true \
        -D I2C_MASTER_CALLBACK_MODE=false \
        -D TC_ASYNC=true \
-       
+
+# Use newlib-nano to reduce application size
+LDFLAGS += -lm \
+	--specs=nano.specs
+
+
 # Additional search paths for libraries.
-LIB_PATH = $(ASF_PATH)/thirdparty/CMSIS/Lib/GCC                          
+LIB_PATH =$(ASF_PATH)/thirdparty/CMSIS/Lib/GCC
+                        
 
 # List of libraries to use during linking.
 LIBS =  arm_cortexM0l_math                                

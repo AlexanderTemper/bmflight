@@ -79,8 +79,7 @@ CFLAGS += --param max-inline-insns-single=500
 # To reduce application size use only integer printf function.
 CFLAGS += -Dprintf=iprintf
 
-# Use newlib-nano to reduce application size
-LDFLAGS += --specs=nano.specs
+
 LDFLAGS += -Wl,--print-memory-usage
 
 MSG_MKDIR = "MKDIR   $(dir $@)"
@@ -103,7 +102,7 @@ debug:: $(EXE_FILE)
 
 
 ############## RELEASE BUILD ############
-release:  CFLAGS += -DNDEBUG -flto -fuse-linker-plugin -ffast-math -Ofast
+release:  CFLAGS += -DNDEBUG -Ofast
 release::
 	@echo "=========== Release Build for $(APP_NAME) ===="
 release:: $(EXE_FILE)
