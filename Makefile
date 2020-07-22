@@ -4,7 +4,7 @@ APP_NAME = BMF055FlightController
 
 EXE_FILE = bin/$(APP_NAME).out
 
-TARGET = SITL
+TARGET = BMF055
 BUILD_DIR := build/
 
 # Choose target MCU
@@ -62,6 +62,19 @@ CFLAGS += -fno-strict-aliasing
 CFLAGS += -ffunction-sections -fdata-sections
 
 # Various cflags.
+CFLAGS += -Wchar-subscripts -Wcomment -Wformat=2 -Wimplicit-int
+CFLAGS += -Wmain -Wparentheses
+CFLAGS += -Wsequence-point -Wreturn-type -Wswitch -Wtrigraphs -Wunused
+CFLAGS += -Wuninitialized -Wunknown-pragmas -Wfloat-equal -Wundef
+CFLAGS += -Wshadow -Wbad-function-cast -Wwrite-strings
+CFLAGS += -Wsign-compare -Waggregate-return
+CFLAGS += -Wmissing-declarations
+CFLAGS += -Wformat -Wmissing-format-attribute -Wno-deprecated-declarations
+CFLAGS += -Wpacked -Wredundant-decls -Wnested-externs -Wlong-long
+CFLAGS += -Wunreachable-code
+CFLAGS += -Wcast-align
+CFLAGS += --param max-inline-insns-single=500
+
 
 LDFLAGS += -Wl,--print-memory-usage
 

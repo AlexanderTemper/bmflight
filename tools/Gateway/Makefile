@@ -1,5 +1,5 @@
 APP_NAME := gateway
-FC_SRC_DIR := ../../src/
+FC_SRC_DIR := ../../
 
 BUILD_DIR := build
 EXE_FILE := bin/$(APP_NAME).out
@@ -51,7 +51,8 @@ CFLAGS += --param max-inline-insns-single=500
 
 # Include PATHS
 INC_PATH := \
-	$(FC_SRC_DIR)
+	$(FC_SRC_DIR)src \
+	$(FC_SRC_DIR)lib/dyad
 	
 # Files to build for source
 CSRCS := \
@@ -60,16 +61,19 @@ CSRCS := \
 	
 	
 CSRCS_FC_SRC := \
-	common/streambuf.c \
-	io/serial.c \
-	msp/msp.c \
-	common/debug.c \
+	src/common/streambuf.c \
+	src/io/serial.c \
+	src/msp/msp.c \
+	src/common/debug.c \
+	src/drivers/SITL/serial_tcp.c \
+	lib/dyad/dyad.c \
 	
 	# Include PATHS
 INC_PATH += $(TEST_FRAMEWORK) 
 
 # Add inlcude paths to preprocessor
 CPPFLAGS  += $(foreach INC,$(addprefix ./,$(INC_PATH)),-I$(INC))
+
 
 obj-y := $(addprefix $(BUILD_DIR)/, $(addsuffix .o,$(basename $(CSRCS_FC_SRC))))	
 

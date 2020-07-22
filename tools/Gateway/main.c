@@ -16,7 +16,7 @@ static void debugStdout(const uint8_t* data, uint16_t len) {
     fwrite(data, 1, len, stdout);
 }
 
-static void serial_initialize(void) {
+static bool initialize_uart_serial(const char *devName) {
     serialInstance.txBuffer = txBuffer;
     serialInstance.txBufferHead = 0;
     serialInstance.txBufferTail = 0;
@@ -33,7 +33,7 @@ static void serial_initialize(void) {
     serialInstance.isSerialTransmitBufferEmpty = &uart_isSerialTransmitBufferEmpty;
     serialInstance.beginWrite = &uart_beginWrite;
     serialInstance.endWrite = &uart_endWrite;
-    uart_serial_initialize(&serialInstance);
+    return uart_serial_initialize(&serialInstance, devName);
 
 }
 /**
@@ -89,10 +89,23 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
     }
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+
     initDebug(&debugStdout);
 
-    serial_initialize();
+    if (argc == 3 && !strcmp(argv[1], "uart")) {
+        printf("Start Uart Serial\n");
+        if (!initialize_uart_serial(argv[2])) {
+            return -1;
+        }
+
+    } else if (argc == 2 && !strcmp(argv[1], "tcp")) {
+        printf("Start TCP Serial\n*** todo implement***\n");
+        return -1;
+    } else {
+        printf("-------- Usage --------\n    gateway [uart] [devName]\n    or\n    gateway [tcp]\n");
+        return -1;
+    }
 
     mspPort.mspProcessCommandFnPtr = &mspFcProcessCommand;
     mspPort.mspProcessReplyFnPtr = &mspFcProcessReply;

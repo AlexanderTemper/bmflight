@@ -95,10 +95,6 @@ void uart_serialWrite(serialPort_t *instance, uint8_t ch) {
     } else {
         instance->txBufferHead++;
     }
-    //    pthread_mutex_unlock(&tcpSerialPort.txLock);
-
-    instance->txBufferTail = instance->txBufferHead;
-    //    pthread_mutex_lock(&tcpSerialPort.txLock);
 
     if (instance->txBufferHead < instance->txBufferTail) {
         // send data till end of buffer
@@ -171,14 +167,15 @@ void uart_endWrite(serialPort_t *instance) {
 
 }
 
-void uart_serial_initialize(serialPort_t *instance) {
-    fd = open("/dev/ttyUSB0", O_RDWR | O_NOCTTY | O_NDELAY);
+bool uart_serial_initialize(serialPort_t *instance, const char *devName) {
+    fd = open(devName, O_RDWR | O_NOCTTY | O_NDELAY);
     if (fd == -1) {
         perror("open_port: Unable to open");
-        return;
+        return false;
     } else {
         set_interface_attribs(fd, B115200, 0);  // set speed to 115,200 bps, 8n1 (no parity)
         set_blocking(fd, 0);
     }
+    return true;
 }
 

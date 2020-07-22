@@ -2,7 +2,7 @@
 
 #include "io/serial.h"
 
-void uart_serial_initialize(serialPort_t *instance);
+bool uart_serial_initialize(serialPort_t *instance, const char *devName);
 
 void uart_serialWrite(serialPort_t *instance, uint8_t ch);
 uint8_t uart_serialRead(serialPort_t *instance);
