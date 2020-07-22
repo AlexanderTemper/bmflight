@@ -7,7 +7,7 @@
 #include "bmg160_support.h"
 #include "bma2x2_support.h"
 #include "tc_support.h"
-#include "drivers/SAMD20J18/serial.h"
+#include "usart_support.h"
 
 // common includes
 #include "platform.h"
@@ -30,48 +30,9 @@ static gyroDev_t gyroDev;
 static uint8_t rxBuffer[BUFFER_SIZE];
 static uint8_t txBuffer[BUFFER_SIZE];
 
-/***************************************************************
- *
- *              local Functions
- *
- ***************************************************************/
-/**
- * callback function for writing data to the serial interface
- */
-static void samd20j18_serial_writeCallback(void) {
-    // nothing to transmit
-    if (serialInstance.txBufferHead == serialInstance.txBufferTail) {
-        return;
-    }
-    if (serialInstance.txBufferHead > serialInstance.txBufferTail) {
-        if (samd20j18_serial_write(&serialInstance.txBuffer[serialInstance.txBufferTail], serialInstance.txBufferHead - serialInstance.txBufferTail)) {
-            serialInstance.txBufferTail = serialInstance.txBufferHead;
-        }
-
-    } else {
-        if (samd20j18_serial_write(&serialInstance.txBuffer[serialInstance.txBufferTail], serialInstance.txBufferSize - serialInstance.txBufferTail)) {
-            serialInstance.txBufferTail = 0;
-        }
-    }
-}
-
-/**
- * callback function called when data on the serial interface arrives
- * @param data
- */
-static void samd20j18_serial_readCallback(uint8_t data) {
-    serialInstance.rxBuffer[serialInstance.rxBufferHead] = data;
-    if (serialInstance.rxBufferHead + 1 >= serialInstance.rxBufferSize) {
-        serialInstance.rxBufferHead = 0;
-    } else {
-        serialInstance.rxBufferHead++;
-    }
-}
-
 //static void debugSerial(const uint8_t* data, uint16_t len) {
 //    serialWriteBuf(&serialInstance, data, len);
 //}
-
 /**
  * generate response for command requestet on msp
  * @param cmdMSP
@@ -156,10 +117,10 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         break;
     case MSP_RAW_IMU: {
         for (int i = 0; i < 3; i++) {
-            sbufWriteU16(dst, lrintf(accDev.ADCRaw[i]*100*accDev.scale));
+            sbufWriteU16(dst, lrintf(accDev.ADCRaw[i] * 100 * accDev.scale));
         }
         for (int i = 0; i < 3; i++) {
-            sbufWriteU16(dst, lrintf((float)gyroDev.ADCRaw[i]*100*gyroDev.scale));
+            sbufWriteU16(dst, lrintf((float) gyroDev.ADCRaw[i] * 100 * gyroDev.scale));
         }
         for (int i = 0; i < 3; i++) {
             sbufWriteU16(dst, 100);
@@ -281,8 +242,14 @@ void serial_initialize(void) {
     serialInstance.rxBufferHead = 0;
     serialInstance.rxBufferTail = 0;
     serialInstance.rxBufferSize = BUFFER_SIZE;
-    serialInstance.triggerWrite = samd20j18_serial_writeCallback;
-    samd20j18_serial_initialize(&samd20j18_serial_writeCallback, &samd20j18_serial_readCallback);
+    serialInstance.serialWrite = &samd20j18_serialWrite;
+    serialInstance.serialRead = &samd20j18_serialRead;
+    serialInstance.serialTotalRxWaiting = &samd20j18_serialTotalRxWaiting;
+    serialInstance.serialTotalTxFree = &samd20j18_serialTotalTxFree;
+    serialInstance.isSerialTransmitBufferEmpty = &samd20j18_isSerialTransmitBufferEmpty;
+    serialInstance.beginWrite = &samd20j18_beginWrite;
+    serialInstance.endWrite = &samd20j18_endWrite;
+    samd20j18_serial_initialize(&serialInstance);
     //initDebug(&debugSerial);
 }
 

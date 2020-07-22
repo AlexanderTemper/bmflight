@@ -18,8 +18,14 @@ struct serialPort_s {
     volatile uint32_t txBufferTail;
 
     // if true only the buffer gets filled by serialWrite can be enabled and disabled by serialBeginWrite and serialEndWrite
-    bool blockWriteToHW;
-    void (*triggerWrite)(void);
+    void (*serialWrite)(serialPort_t *instance, uint8_t ch);
+    uint8_t (*serialRead)(serialPort_t *instance);
+    uint32_t (*serialTotalRxWaiting)(const serialPort_t *instance);
+    uint32_t (*serialTotalTxFree)(const serialPort_t *instance);
+    bool (*isSerialTransmitBufferEmpty)(const serialPort_t *instance);
+    // Optional functions used to buffer large writes.
+    void (*beginWrite)(serialPort_t *instance);
+    void (*endWrite)(serialPort_t *instance);
 };
 
 void serialWrite(serialPort_t *instance, uint8_t ch);

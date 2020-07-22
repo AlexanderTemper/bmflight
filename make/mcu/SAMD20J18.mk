@@ -89,6 +89,7 @@ CSRCS += \
 	$(SAMD_LIB_PATH)/ASF_Support/spi_support.c   \
 	$(SAMD_LIB_PATH)/ASF_Support/i2c_support.c   \
 	$(SAMD_LIB_PATH)/ASF_Support/tc_support.c    \
+	$(SAMD_LIB_PATH)/ASF_Support/usart_support.c \
 	$(SAMD_LIB_PATH)/drivers/bma2x2_support.c    \
 	$(SAMD_LIB_PATH)/drivers/bma2x2.c            \
 	$(SAMD_LIB_PATH)/drivers/bmg160_support.c    \
@@ -98,7 +99,6 @@ CSRCS += \
 	
 	
 CSRCS += \
-	src/drivers/SAMD20J18/serial.c  \
 	src/drivers/SAMD20J18/platform.c
 
 #------------------------------ Compiler --------------------------------
@@ -116,9 +116,11 @@ CFLAGS = \
        -D I2C_MASTER_CALLBACK_MODE=false \
        -D TC_ASYNC=true \
 
+# To reduce application size use only integer printf function.
+CFLAGS += -Dprintf=iprintf
+
 # Use newlib-nano to reduce application size
-LDFLAGS += -lm \
-	--specs=nano.specs
+LDFLAGS += --specs=nano.specs
 
 
 # Additional search paths for libraries.

@@ -13,22 +13,83 @@
 static uint8_t rxBuffer[BUFFER_SIZE];
 static uint8_t txBuffer[BUFFER_SIZE];
 
-/**
- * do not send any data
- * @param instance
- */
-static void dummySerialWrite(void) {
+
+/****************************************************************
+ *                       serial functions
+ ****************************************************************/
+static bool blockWriteToHW = false;
+static void dummy_serialWrite(serialPort_t *instance, uint8_t ch) {
+    instance->txBuffer[instance->txBufferHead] = ch;
+
+    if (instance->txBufferHead + 1 >= instance->txBufferSize) {
+        instance->txBufferHead = 0;
+    } else {
+        instance->txBufferHead++;
+    }
+}
+
+static uint8_t dummy_serialRead(serialPort_t *instance) {
+    uint8_t ch;
+
+    ch = instance->rxBuffer[instance->rxBufferTail];
+    if (instance->rxBufferTail + 1 >= instance->rxBufferSize) {
+        instance->rxBufferTail = 0;
+    } else {
+        instance->rxBufferTail++;
+    }
+
+    return ch;
+}
+
+static uint32_t dummy_serialTotalRxWaiting(const serialPort_t *instance) {
+    uint32_t bytes = 0;
+
+    if (instance->rxBufferHead >= instance->rxBufferTail) {
+        bytes = instance->rxBufferHead - instance->rxBufferTail;
+    } else {
+        bytes = instance->rxBufferSize + instance->rxBufferHead - instance->rxBufferTail;
+    }
+
+    return bytes;
+}
+
+static uint32_t dummy_serialTotalTxFree(const serialPort_t *instance) {
+    uint32_t bytesUsed, bytesFree;
+
+    if (instance->txBufferHead >= instance->txBufferTail) {
+        bytesUsed = instance->txBufferHead - instance->txBufferTail;
+    } else {
+        bytesUsed = instance->txBufferSize + instance->txBufferHead - instance->txBufferTail;
+    }
+    // -1 so the buffer can never get full
+    bytesFree = (instance->txBufferSize - 1) - bytesUsed;
+
+    return bytesFree;
+}
+
+static void dummy_beginWrite(serialPort_t *instance) {
+    blockWriteToHW = true;
+}
+
+static void dummy_endWrite(serialPort_t *instance) {
+    blockWriteToHW = false;
+}
+
+static bool dummy_isSerialTransmitBufferEmpty(const serialPort_t *instance) {
+    bool empty = instance->txBufferHead == instance->txBufferTail;
+    return empty;
 }
 
 /**
+ *
  * @param cmd
  * @param reply
  * @return
  */
-static mspResult_e mspFcProcessCommand(mspPacket_t *cmd, mspPacket_t *reply) {
+static mspResult_e dummy_mspFcProcessCommand(mspPacket_t *cmd, mspPacket_t *reply) {
     int ret = MSP_RESULT_ACK;
     sbuf_t *dst = &reply->buf;
-    sbuf_t *src = &cmd->buf;
+    //sbuf_t *src = &cmd->buf;
     const uint8_t cmdMSP = cmd->cmd;
     // initialize reply by default
     reply->cmd = cmd->cmd;
@@ -56,7 +117,13 @@ static void initSerial(serialPort_t *instance) {
     instance->rxBufferHead = 0;
     instance->rxBufferTail = 0;
     instance->rxBufferSize = BUFFER_SIZE;
-    instance->triggerWrite = dummySerialWrite;
+    instance->serialWrite = &dummy_serialWrite;
+    instance->serialRead = &dummy_serialRead;
+    instance->serialTotalRxWaiting = &dummy_serialTotalRxWaiting;
+    instance->serialTotalTxFree = &dummy_serialTotalTxFree;
+    instance->isSerialTransmitBufferEmpty = &dummy_isSerialTransmitBufferEmpty;
+    instance->beginWrite = &dummy_beginWrite;
+    instance->endWrite = &dummy_endWrite;
 }
 /**
  * write a byte to the rx Buffer
@@ -108,7 +175,7 @@ static void test_simple(void) {
     serialPort_t testSerial;
     initSerial(&testSerial);
     mspPort_t mspPort;
-    mspPort.mspProcessCommandFnPtr = &mspFcProcessCommand;
+    mspPort.mspProcessCommandFnPtr = &dummy_mspFcProcessCommand;
     mspInit(&mspPort, &testSerial);
 
     //send MSP_API_VERSION over MSP V1
@@ -141,6 +208,20 @@ static void test_simple(void) {
     sput_fail_unless(mspPort.c_state == MSP_IDLE, "MSP_IDLE");
     sput_fail_unless(mspPort.cmdMSP == 1, "MSP_API_VERSION decode");
 }
+/**
+ * assert function if two byte are same
+ * @param a
+ * @param b
+ * @return
+ */
+static bool isSame(uint8_t a, uint8_t b) {
+    if (a == b) {
+        return true;
+    }
+
+    printf("Not Same: %c [0x%x] != %c [0x%x] \n", a, a, b, b);
+    return false;
+}
 
 /**
  * test pushing a command
@@ -150,18 +231,19 @@ static void test_push_msp(void) {
     initSerial(&testSerial);
 
     mspPort_t mspPort;
-    mspPort.mspProcessCommandFnPtr = &mspFcProcessCommand;
+    mspPort.mspProcessCommandFnPtr = &dummy_mspFcProcessCommand;
     mspInit(&mspPort, &testSerial);
 
     mspSerialPush(&mspPort, MSP_API_VERSION, 0, 0, MSP_DIRECTION_REQUEST);
 
     bool ok = true;
-    ok &= (readTxBuffer(&testSerial) == '$');
-    ok &= (readTxBuffer(&testSerial) == 'M');
-    ok &= (readTxBuffer(&testSerial) == '<');
-    ok &= (readTxBuffer(&testSerial) == 0);
-    ok &= (readTxBuffer(&testSerial) == MSP_API_VERSION);
-    ok &= (readTxBuffer(&testSerial) == 1);
+
+    ok &= isSame(readTxBuffer(&testSerial), '$');
+    ok &= isSame(readTxBuffer(&testSerial), 'M');
+    ok &= isSame(readTxBuffer(&testSerial), '<');
+    ok &= isSame(readTxBuffer(&testSerial), 0);
+    ok &= isSame(readTxBuffer(&testSerial), MSP_API_VERSION);
+    ok &= isSame(readTxBuffer(&testSerial), 1);
 
     sput_fail_unless(ok, "MSP_API_VERSION Request OK");
     testSerial.txBufferTail = testSerial.txBufferHead = 0; //Reset Buffer
@@ -179,21 +261,6 @@ static uint8_t getCRC(const uint8_t *data, int len) {
         checksum ^= *data++;
     }
     return checksum;
-}
-
-/**
- * assert function if two byte are same
- * @param a
- * @param b
- * @return
- */
-static bool isSame(uint8_t a, uint8_t b) {
-    if (a == b) {
-        return true;
-    }
-
-    printf("Not Same: %c [0x%x] != %c [0x%x] \n", a, a, b, b);
-    return false;
 }
 
 /**
@@ -278,7 +345,7 @@ static void test_reply(void) {
     serialPort_t testSerial;
     initSerial(&testSerial);
     mspPort_t mspPort;
-    mspPort.mspProcessCommandFnPtr = &mspFcProcessCommand;
+    mspPort.mspProcessCommandFnPtr = &dummy_mspFcProcessCommand;
     mspInit(&mspPort, &testSerial);
     generateRequest(MSP_API_VERSION, &mspPort);
     mspProcess(&mspPort);
@@ -320,7 +387,7 @@ static void test_printDebug(void) {
     serialPort_t testSerial;
     initSerial(&testSerial);
     mspPort_t mspPort;
-    mspPort.mspProcessCommandFnPtr = &mspFcProcessCommand;
+    mspPort.mspProcessCommandFnPtr = &dummy_mspFcProcessCommand;
     mspInit(&mspPort, &testSerial);
     initMspDebugPort(&mspPort);
     initDebug(&mspDebugData);

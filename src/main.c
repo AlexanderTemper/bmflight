@@ -51,7 +51,7 @@ int main(void) {
 
         if(now >= next){
             next = now + 1000;
-            //printDebug("\n 1Sec");
+            printDebug("\n 1Sec");
         }
     }
 

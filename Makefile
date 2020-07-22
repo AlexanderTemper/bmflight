@@ -40,9 +40,8 @@ CPPFLAGS  += $(foreach INC,$(addprefix ./,$(INC_PATH)),-I$(INC))
 # Dependency file flags.
 DEPFLAGS = -MD -MP -MQ $@
 
-# Use pipes instead of temporary files for communication between processes
 CFLAGS  += -pipe
-LDFLAGS += -pipe
+LDFLAGS += -pipe -lm
 
 # Always enable warnings. And be very careful about implicit
 # declarations.
@@ -63,22 +62,6 @@ CFLAGS += -fno-strict-aliasing
 CFLAGS += -ffunction-sections -fdata-sections
 
 # Various cflags.
-CFLAGS += -Wchar-subscripts -Wcomment -Wformat=2 -Wimplicit-int
-CFLAGS += -Wmain -Wparentheses
-CFLAGS += -Wsequence-point -Wreturn-type -Wswitch -Wtrigraphs -Wunused
-CFLAGS += -Wuninitialized -Wunknown-pragmas -Wfloat-equal -Wundef
-CFLAGS += -Wshadow -Wbad-function-cast -Wwrite-strings
-CFLAGS += -Wsign-compare -Waggregate-return
-CFLAGS += -Wmissing-declarations
-CFLAGS += -Wformat -Wmissing-format-attribute -Wno-deprecated-declarations
-CFLAGS += -Wpacked -Wredundant-decls -Wnested-externs -Wlong-long
-CFLAGS += -Wunreachable-code
-CFLAGS += -Wcast-align
-CFLAGS += --param max-inline-insns-single=500
-
-# To reduce application size use only integer printf function.
-CFLAGS += -Dprintf=iprintf
-
 
 LDFLAGS += -Wl,--print-memory-usage
 
