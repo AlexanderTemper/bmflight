@@ -4,7 +4,7 @@ APP_NAME = BMF055FlightController
 
 EXE_FILE = bin/$(APP_NAME).out
 
-TARGET = BMF055
+TARGET = SITL
 BUILD_DIR := build/
 
 # Choose target MCU

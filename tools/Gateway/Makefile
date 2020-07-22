@@ -54,7 +54,11 @@ INC_PATH := \
 	$(FC_SRC_DIR)
 	
 # Files to build for source
-CSRCS := main.c
+CSRCS := \
+	main.c      \
+	uart_serial \
+	
+	
 CSRCS_FC_SRC := \
 	common/streambuf.c \
 	io/serial.c \

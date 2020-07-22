@@ -17,5 +17,14 @@ typedef struct {
 typedef void (*writeCallbackFuncPtr)(void);
 typedef void (*readCallbackFuncPtr)(uint8_t data);
 
-void tcp_serial_initialize(writeCallbackFuncPtr wp,readCallbackFuncPtr rp);
-bool tcp_serial_write(uint8_t *tx_data,uint16_t length);
+
+void tcp_serial_initialize(serialPort_t *instance);
+
+void tcp_serialWrite(serialPort_t *instance, uint8_t ch);
+uint8_t tcp_serialRead(serialPort_t *instance);
+uint32_t tcp_serialTotalRxWaiting(const serialPort_t *instance);
+uint32_t tcp_serialTotalTxFree(const serialPort_t *instance);
+bool tcp_isSerialTransmitBufferEmpty(const serialPort_t *instance);
+
+void tcp_beginWrite(serialPort_t *instance);
+void tcp_endWrite(serialPort_t *instance);

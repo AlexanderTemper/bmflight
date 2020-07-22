@@ -6,42 +6,118 @@
 #include <stdlib.h>
 #include <errno.h>
 
-
 static tcpPort_t tcpSerialPort;
+static serialPort_t *serialPort;
 static bool tcpPortInitialized;
 static bool tcpStart = false;
 
 #define BASE_PORT 5760
 
+void tcp_serialWrite(serialPort_t *instance, uint8_t ch) {
+    pthread_mutex_lock(&tcpSerialPort.txLock);
 
-static readCallbackFuncPtr readCallback;
-
-bool tcp_serial_write(uint8_t *tx_data,uint16_t length){
-    //printf("try write \n");
-    fwrite(tx_data,1,length,stdout);
-    if (tcpSerialPort.conn == NULL){
-        return false;
+    instance->txBuffer[instance->txBufferHead] = ch;
+    if (instance->txBufferHead + 1 >= instance->txBufferSize) {
+        instance->txBufferHead = 0;
+    } else {
+        instance->txBufferHead++;
     }
-    dyad_write(tcpSerialPort.conn, (const void *) &tx_data, length);
-    //printf("write done \n");
-    return true;
+    pthread_mutex_unlock(&tcpSerialPort.txLock);
+
+    instance->txBufferTail = instance->txBufferHead;
+
+    if (tcpSerialPort.conn == NULL) {
+        fwrite(&ch, 1, 1, stdout);
+        return;
+    }
+
+    pthread_mutex_lock(&tcpSerialPort.txLock);
+
+    if (instance->txBufferHead < instance->txBufferTail) {
+        // send data till end of buffer
+        int chunk = instance->txBufferSize - instance->txBufferTail;
+        dyad_write(tcpSerialPort.conn, (const void *) &instance->txBuffer[instance->txBufferTail], chunk);
+        instance->txBufferTail = 0;
+    }
+    int chunk = instance->txBufferHead - instance->txBufferTail;
+    if (chunk) {
+        dyad_write(tcpSerialPort.conn, (const void*) &instance->txBuffer[instance->txBufferTail], chunk);
+    }
+    instance->txBufferTail = instance->txBufferHead;
+
+    pthread_mutex_unlock(&tcpSerialPort.txLock);
+}
+uint8_t tcp_serialRead(serialPort_t *instance) {
+    uint8_t ch;
+
+    pthread_mutex_lock(&tcpSerialPort.rxLock);
+
+    ch = instance->rxBuffer[instance->rxBufferTail];
+    if (instance->rxBufferTail + 1 >= instance->rxBufferSize) {
+        instance->rxBufferTail = 0;
+    } else {
+        instance->rxBufferTail++;
+    }
+    pthread_mutex_unlock(&tcpSerialPort.rxLock);
+
+    return ch;
+}
+uint32_t tcp_serialTotalRxWaiting(const serialPort_t *instance) {
+    int32_t count;
+    pthread_mutex_lock(&tcpSerialPort.rxLock);
+    if (instance->rxBufferHead >= instance->rxBufferTail) {
+        count = instance->rxBufferHead - instance->rxBufferTail;
+    } else {
+        count = instance->rxBufferSize + instance->rxBufferHead - instance->rxBufferTail;
+    }
+    pthread_mutex_unlock(&tcpSerialPort.rxLock);
+
+    return count;
+}
+uint32_t tcp_serialTotalTxFree(const serialPort_t *instance) {
+    uint32_t bytesUsed;
+    pthread_mutex_lock(&tcpSerialPort.txLock);
+    if (instance->txBufferHead >= instance->txBufferTail) {
+        bytesUsed = instance->txBufferHead - instance->txBufferTail;
+    } else {
+        bytesUsed = instance->txBufferSize + instance->txBufferHead - instance->txBufferTail;
+    }
+    uint32_t bytesFree = (instance->txBufferSize - 1) - bytesUsed;
+    pthread_mutex_unlock(&tcpSerialPort.txLock);
+    return bytesFree;
+}
+bool tcp_isSerialTransmitBufferEmpty(const serialPort_t *instance) {
+    pthread_mutex_lock(&tcpSerialPort.txLock);
+    bool isEmpty = instance->txBufferTail == instance->txBufferHead;
+    pthread_mutex_unlock(&tcpSerialPort.txLock);
+    return isEmpty;
 }
 
-static void tcpDataIn(tcpPort_t *instance, uint8_t* ch, int size)
-{
-    tcpPort_t *s = (tcpPort_t *)instance;
-    pthread_mutex_lock(&s->rxLock);
+void tcp_beginWrite(serialPort_t *instance) {
 
+}
+void tcp_endWrite(serialPort_t *instance) {
+
+}
+
+static void tcpDataIn(serialPort_t *instance, uint8_t* ch, int size) {
+
+    pthread_mutex_lock(&tcpSerialPort.rxLock);
     while (size--) {
-        readCallback(*(ch++));
+        //        printf("%c", *ch);
+        instance->rxBuffer[instance->rxBufferHead] = *(ch++);
+        if (instance->rxBufferHead + 1 >= instance->rxBufferSize) {
+            instance->rxBufferHead = 0;
+        } else {
+            instance->rxBufferHead++;
+        }
     }
-    pthread_mutex_unlock(&s->rxLock);
-}
-static void onData(dyad_Event *e) {
-    tcpPort_t* s = (tcpPort_t*) (e->udata);
-    tcpDataIn(s, (uint8_t*) e->data, e->size);
+    pthread_mutex_unlock(&tcpSerialPort.rxLock);
 }
 
+static void onData(dyad_Event *e) {
+    tcpDataIn(serialPort, (uint8_t*) e->data, e->size);
+}
 
 static void onClose(dyad_Event *e) {
     tcpPort_t* s = (tcpPort_t*) (e->udata);
@@ -104,9 +180,8 @@ static void tcpReconfigure(tcpPort_t *s, int id) {
     }
 }
 
-
-void tcp_serial_initialize(writeCallbackFuncPtr wp, readCallbackFuncPtr rp) {
+void tcp_serial_initialize(serialPort_t *instance) {
+    serialPort = instance;
     tcpReconfigure(&tcpSerialPort, 1);
-    readCallback = rp;
 }
 

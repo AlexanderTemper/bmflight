@@ -3,8 +3,6 @@
 #include "common/debug.h"
 #include "common/time.h"
 
-
-
 //#define LED_ROT PIN_PA24
 //#define LED_GELB PIN_PB02
 //#define LED_GRUEN PIN_PA28
@@ -36,7 +34,6 @@ int main(void) {
 
     timeMs_t now = millis();
     timeMs_t next = now + 1000;
-
     /************************** Infinite Loop *******************************/
     printDebug("\r\n\n------- Debug Build 3 -------\n\n\r");
     while (true) {
@@ -51,7 +48,7 @@ int main(void) {
 
         if(now >= next){
             next = now + 1000;
-            printDebug("\n 1Sec");
+            printDebug("sec \n");
         }
     }
 

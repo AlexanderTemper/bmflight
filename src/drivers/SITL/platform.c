@@ -20,6 +20,7 @@ static mspPort_t mspPort;
 
 static struct timespec start_time;
 uint32_t SystemCoreClock;
+static double simRate = 1.0;
 
 // buffer for serial interface
 #define BUFFER_SIZE 1400
@@ -31,39 +32,6 @@ static uint8_t txBuffer[BUFFER_SIZE];
  *              local Functions
  *
  ***************************************************************/
-/**
- * callback function for writing data to the serial interface
- */
-static void tcp_serial_writeCallback(void) {
-
-    // nothing to transmit
-    if (serialInstance.txBufferHead == serialInstance.txBufferTail) {
-        return;
-    }
-
-    int chunk = serialInstance.txBufferSize - serialInstance.txBufferTail;
-    if (serialInstance.txBufferHead < serialInstance.txBufferTail) {
-        tcp_serial_write(&serialInstance.txBuffer[serialInstance.txBufferTail], chunk);
-        serialInstance.txBufferTail = 0;
-    }
-    chunk = serialInstance.txBufferHead - serialInstance.txBufferTail;
-    tcp_serial_write(&serialInstance.txBuffer[serialInstance.txBufferTail], serialInstance.txBufferSize - serialInstance.txBufferTail);
-
-    serialInstance.txBufferTail = serialInstance.txBufferHead;
-}
-
-/**
- * callback function called when data on the serial interface arrives
- * @param data
- */
-static void tcp_serial_readCallback(uint8_t data) {
-    serialInstance.rxBuffer[serialInstance.rxBufferHead] = data;
-    if (serialInstance.rxBufferHead + 1 >= serialInstance.rxBufferSize) {
-        serialInstance.rxBufferHead = 0;
-    } else {
-        serialInstance.rxBufferHead++;
-    }
-}
 
 static void debugSerial(const uint8_t* data, uint16_t len) {
     serialWriteBuf(&serialInstance, data, len);
@@ -149,8 +117,14 @@ void serial_initialize(void) {
     serialInstance.rxBufferHead = 0;
     serialInstance.rxBufferTail = 0;
     serialInstance.rxBufferSize = BUFFER_SIZE;
-    serialInstance.triggerWrite = tcp_serial_writeCallback;
-    tcp_serial_initialize(&tcp_serial_writeCallback, &tcp_serial_readCallback);
+    serialInstance.serialWrite = &tcp_serialWrite;
+    serialInstance.serialRead = &tcp_serialRead;
+    serialInstance.serialTotalRxWaiting = &tcp_serialTotalRxWaiting;
+    serialInstance.serialTotalTxFree = &tcp_serialTotalTxFree;
+    serialInstance.isSerialTransmitBufferEmpty = &tcp_isSerialTransmitBufferEmpty;
+    serialInstance.beginWrite = &tcp_beginWrite;
+    serialInstance.endWrite = &tcp_endWrite;
+    tcp_serial_initialize(&serialInstance);
 
     initDebug(&debugSerial);
 }
@@ -162,22 +136,61 @@ void msp_initialize(void) {
     initMspDebugPort(&mspPort);
     //initDebug(&mspDebugData);
 }
-static uint32_t micros32_real(void) {
+
+static int64_t nanos64_real(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
-    return 1.0e6 * ((ts.tv_sec + (ts.tv_nsec * 1.0e-9)) - (start_time.tv_sec + (start_time.tv_nsec * 1.0e-9)));
+    return (ts.tv_sec * 1e9 + ts.tv_nsec) - (start_time.tv_sec * 1e9 + start_time.tv_nsec);
 }
-static uint32_t millis32_real(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return 1.0e3 * ((ts.tv_sec + (ts.tv_nsec * 1.0e-9)) - (start_time.tv_sec + (start_time.tv_nsec * 1.0e-9)));
+//static uint64_t micros64_real() {
+//    struct timespec ts;
+//    clock_gettime(CLOCK_MONOTONIC, &ts);
+//    return 1.0e6 * ((ts.tv_sec + (ts.tv_nsec * 1.0e-9)) - (start_time.tv_sec + (start_time.tv_nsec * 1.0e-9)));
+//}
+//
+//static uint64_t millis64_real() {
+//    struct timespec ts;
+//    clock_gettime(CLOCK_MONOTONIC, &ts);
+//    return 1.0e3 * ((ts.tv_sec + (ts.tv_nsec * 1.0e-9)) - (start_time.tv_sec + (start_time.tv_nsec * 1.0e-9)));
+//}
+
+static uint64_t micros64(void) {
+    static uint64_t last = 0;
+    static uint64_t out = 0;
+    uint64_t now = nanos64_real();
+
+    out += (now - last) * simRate;
+    last = now;
+
+    return out * 1e-3;
+//    return micros64_real();
 }
+static uint64_t millis64(void) {
+    static uint64_t last = 0;
+    static uint64_t out = 0;
+    uint64_t now = nanos64_real();
+
+    out += (now - last) * simRate;
+    last = now;
+
+    return out*1e-6;
+//    return millis64_real();
+}
+
+static uint32_t sitl_micros(void) {
+    return micros64() & 0xFFFFFFFF;
+}
+
+static uint32_t sitl_millis(void) {
+    return millis64() & 0xFFFFFFFF;
+}
+
 void platform_initialize(void) {
     clock_gettime(CLOCK_MONOTONIC, &start_time);
     SystemCoreClock = 500 * 1e6; // fake 500MHz
     printf("[system]Init...\n");
 
-    initTime(&millis32_real, &micros32_real);
+    initTime(&sitl_millis, &sitl_micros);
 }
 
 void interrupt_enable(void) {
