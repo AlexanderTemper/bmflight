@@ -3,11 +3,14 @@
 #include "common/debug.h"
 #include "common/time.h"
 
+//#include <stdio.h>
+//#include "dyad.h"
 //#define LED_ROT PIN_PA24
 //#define LED_GELB PIN_PB02
 //#define LED_GRUEN PIN_PA28
 
 int main(void) {
+
     platform_initialize();
 
     serial_initialize();
@@ -38,14 +41,8 @@ int main(void) {
     printDebug("\r\n\n------- Debug Build 3 -------\n\n\r");
     while (true) {
         now = millis();
-
-
         sensor_read();
-
         processMSP();
-
-
-
         if(now >= next){
             next = now + 1000;
             printDebug("sec \n");

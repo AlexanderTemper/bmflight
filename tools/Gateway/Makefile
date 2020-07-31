@@ -52,7 +52,7 @@ CFLAGS += --param max-inline-insns-single=500
 # Include PATHS
 INC_PATH := \
 	$(FC_SRC_DIR)src \
-	$(FC_SRC_DIR)lib/dyad
+
 	
 # Files to build for source
 CSRCS := \
@@ -66,7 +66,6 @@ CSRCS_FC_SRC := \
 	src/msp/msp.c \
 	src/common/debug.c \
 	src/drivers/SITL/serial_tcp.c \
-	lib/dyad/dyad.c \
 	
 	# Include PATHS
 INC_PATH += $(TEST_FRAMEWORK) 

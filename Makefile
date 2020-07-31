@@ -4,7 +4,7 @@ APP_NAME = BMF055FlightController
 
 EXE_FILE = bin/$(APP_NAME).out
 
-TARGET = BMF055
+TARGET = SITL
 BUILD_DIR := build/
 
 # Choose target MCU
@@ -40,8 +40,9 @@ CPPFLAGS  += $(foreach INC,$(addprefix ./,$(INC_PATH)),-I$(INC))
 # Dependency file flags.
 DEPFLAGS = -MD -MP -MQ $@
 
+# Use pipes instead of temporary files for communication between processes
 CFLAGS  += -pipe
-LDFLAGS += -pipe -lm
+LDFLAGS += -pipe
 
 # Always enable warnings. And be very careful about implicit
 # declarations.

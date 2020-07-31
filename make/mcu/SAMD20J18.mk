@@ -132,7 +132,7 @@ LIBS =  arm_cortexM0l_math
 
 # Extra flags to use when linking
 #LDFLAGS = -u _printf_float
-#LDFLAGS = -lm -lc -lnosys //TODO brauch ich die?
+LDFLAGS = -lm -lc -lnosys
 # CPU specific flags.
 cpu_flags = -mcpu=cortex-m0plus -mthumb -D=__SAMD20J18__
 

@@ -4,9 +4,11 @@
 #include "msp/msp_protocol.h"
 #include "common/debug.h"
 #include "uart_serial.h"
+#include "drivers/SITL/serial_tcp.h"
 
 static serialPort_t serialInstance;
 static mspPort_t mspPort;
+static tcpPort_t tcpSerialPort;
 
 #define BUFFER_SIZE 256
 static uint8_t rxBuffer[BUFFER_SIZE];
@@ -34,7 +36,26 @@ static bool initialize_uart_serial(const char *devName) {
     serialInstance.beginWrite = &uart_beginWrite;
     serialInstance.endWrite = &uart_endWrite;
     return uart_serial_initialize(&serialInstance, devName);
+}
 
+static void initialize_tcp_serial(void) {
+    serialInstance.txBuffer = txBuffer;
+    serialInstance.txBufferHead = 0;
+    serialInstance.txBufferTail = 0;
+    serialInstance.txBufferSize = BUFFER_SIZE;
+    serialInstance.rxBuffer = rxBuffer;
+
+    serialInstance.rxBufferHead = 0;
+    serialInstance.rxBufferTail = 0;
+    serialInstance.rxBufferSize = BUFFER_SIZE;
+    serialInstance.serialWrite = &tcp_serialWrite;
+    serialInstance.serialRead = &tcp_serialRead;
+    serialInstance.serialTotalRxWaiting = &tcp_serialTotalRxWaiting;
+    serialInstance.serialTotalTxFree = &tcp_serialTotalTxFree;
+    serialInstance.isSerialTransmitBufferEmpty = &tcp_isSerialTransmitBufferEmpty;
+    serialInstance.beginWrite = &tcp_beginWrite;
+    serialInstance.endWrite = &tcp_endWrite;
+    tcp_serial_initialize(&serialInstance, &tcpSerialPort);
 }
 /**
  * @param cmd
@@ -88,9 +109,8 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
         break;
     }
 }
-
 int main(int argc, char *argv[]) {
-
+    bool uart = false;
     initDebug(&debugStdout);
 
     if (argc == 3 && !strcmp(argv[1], "uart")) {
@@ -98,10 +118,11 @@ int main(int argc, char *argv[]) {
         if (!initialize_uart_serial(argv[2])) {
             return -1;
         }
+        uart = true;
 
     } else if (argc == 2 && !strcmp(argv[1], "tcp")) {
-        printf("Start TCP Serial\n*** todo implement***\n");
-        return -1;
+        tcp_initialize_client(&tcpSerialPort); //setup tcp Port
+        initialize_tcp_serial();
     } else {
         printf("-------- Usage --------\n    gateway [uart] [devName]\n    or\n    gateway [tcp]\n");
         return -1;
@@ -112,11 +133,14 @@ int main(int argc, char *argv[]) {
     mspInit(&mspPort, &serialInstance);
 
     while (1) {
-        mspSerialPush(&mspPort, MSP_RAW_IMU, 0, 0, MSP_DIRECTION_REQUEST);
-
-        update_read(&serialInstance);
+        //mspSerialPush(&mspPort, MSP_RAW_IMU, 0, 0, MSP_DIRECTION_REQUEST);
+        if (uart) {
+            update_read(&serialInstance);
+        }
 
         mspProcess(&mspPort);
+        sleep(0.05);
     }
+    return 0;
 }
 
