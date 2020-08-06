@@ -1,7 +1,5 @@
----------------------------------------------------------
 
-# work in progress!!!
-
+#work in progress!!!
 ---------------------------------------------------------
 
 # Lightweight Flight Controller
@@ -13,5 +11,3 @@ Features:
 - SITL
 - simulation with SITL and HITL
 - easy to port
-
-
