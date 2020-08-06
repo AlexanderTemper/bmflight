@@ -79,7 +79,6 @@ $ sudo apt-get update
 $ sudo apt-get install gazebo9 gazebo9-* ros-melodic-gazebo-*
 $ sudo apt upgrade
 ```
----------------------------------------------------------
 
 # building ROS package
 ```
