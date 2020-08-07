@@ -26,4 +26,6 @@
             <arg name="log_file" value="$(arg log_file)"/>
         </include>
     </group>
+  <!-- <node name="sitl_interface_node" pkg="bmflight_simulation" type="sitl_interface_node" output="screen" args="$(arg mav_name)"/>-->
+    
 </launch>
