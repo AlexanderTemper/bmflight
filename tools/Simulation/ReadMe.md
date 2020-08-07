@@ -89,12 +89,6 @@ catkin build
 Source the package so it is available to ros
 soure devel/setup.bash
 
-if you dont want to source it in every bash you can add it to bashrc with
-echo "source /opt/ros/indigo/setup.bash" >> ~/.bashrc
-
-and source it once with
-source ~/.bashrc
-
 
 to start the testdrone use:
 roslaunch bmflight_simulation test.launch

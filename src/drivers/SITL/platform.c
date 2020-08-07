@@ -3,6 +3,7 @@
 
 // driver includes
 #include "drivers/SITL/serial_tcp.h"
+#include "drivers/SITL/udplink.h"
 #include <time.h>
 #include <stdio.h>
 
@@ -24,13 +25,25 @@ static tcpPort_t tcpSerialPort;
 static struct timespec start_time;
 uint32_t SystemCoreClock;
 static double simRate = 1.0;
-static pthread_t tcpWorker;
+static pthread_t tcpWorker, udpWorker;
+static udpLink_t stateLink;
 static bool workerRunning = true;
 
 // buffer for serial interface
 #define BUFFER_SIZE 1400
 static uint8_t rxBuffer[BUFFER_SIZE];
 static uint8_t txBuffer[BUFFER_SIZE];
+
+// udp package definition
+#define UDP_SIM_PORT 8810
+typedef struct {
+    double timestamp;                   // in seconds
+    double imu_angular_velocity_rpy[3]; // rad/s -> range: +/- 8192; +/- 2000 deg/se
+    double imu_linear_acceleration_xyz[3];    // m/s/s NED, body frame -> sim 1G = 9.80665, FC 1G = 256
+    double imu_orientation_quat[4];     //w, x, y, z
+    double velocity_xyz[3];             // m/s, earth frame
+    double position_xyz[3];             // meters, NED from origin
+} sim_packet;
 
 /***************************************************************
  *
@@ -41,6 +54,102 @@ static uint8_t txBuffer[BUFFER_SIZE];
 static void debugSerial(const uint8_t* data, uint16_t len) {
     serialWriteBuf(&serialInstance, data, len);
 }
+
+/**
+ * thread waiting for tcp connection and sending and rec data
+ * @param data
+ */
+static void* tcpThread(void* data) {
+    printf("--- MSP-Thread started!!\n");
+    while (workerRunning) {
+        if (!tcpSerialPort.connected) {
+            printf("--- MSP wait for connection\n");
+            int connfd = accept(tcpSerialPort.serverfd, (struct sockaddr*) NULL, NULL);
+            int status = fcntl(connfd, F_SETFL, fcntl(connfd, F_GETFL, 0) | O_NONBLOCK);
+
+            if (status == -1) {
+                perror("calling fcntl");
+                // handle the error.  By the way, I've never seen fcntl fail in this way
+            }
+            tcpSerialPort.connected = true;
+            tcpSerialPort.connfd = connfd;
+            printf("--- MSP client connected \n");
+        }
+        sleep(1);
+    }
+
+    printf("tcpThread end!!\n");
+    return NULL;
+}
+/**
+ * thread for handling udp packages
+ * @param data
+ */
+static void* udpThread(void* data) {
+    (void) (data);
+    while (workerRunning) {
+        sim_packet simPkt;
+        int n = udpRecv(&stateLink, &simPkt, sizeof(sim_packet), 100);
+        if (n == sizeof(sim_packet)) {
+            printf("%f: [%+.4f,%+.4f,%+.4f] [%+.4f,%+.4f,%+.4f]\n", simPkt.timestamp, simPkt.imu_angular_velocity_rpy[0], simPkt.imu_angular_velocity_rpy[1],
+                    simPkt.imu_angular_velocity_rpy[2], simPkt.imu_linear_acceleration_xyz[0], simPkt.imu_linear_acceleration_xyz[1],
+                    simPkt.imu_linear_acceleration_xyz[2]);
+        }
+    }
+
+    printf("udpThread end!!\n");
+    return NULL;
+}
+
+/****************** Time **********************/
+static int64_t nanos64_real(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (ts.tv_sec * 1e9 + ts.tv_nsec) - (start_time.tv_sec * 1e9 + start_time.tv_nsec);
+}
+//static uint64_t micros64_real() {
+//    struct timespec ts;
+//    clock_gettime(CLOCK_MONOTONIC, &ts);
+//    return 1.0e6 * ((ts.tv_sec + (ts.tv_nsec * 1.0e-9)) - (start_time.tv_sec + (start_time.tv_nsec * 1.0e-9)));
+//}
+//
+//static uint64_t millis64_real() {
+//    struct timespec ts;
+//    clock_gettime(CLOCK_MONOTONIC, &ts);
+//    return 1.0e3 * ((ts.tv_sec + (ts.tv_nsec * 1.0e-9)) - (start_time.tv_sec + (start_time.tv_nsec * 1.0e-9)));
+//}
+static uint64_t micros64(void) {
+    static uint64_t last = 0;
+    static uint64_t out = 0;
+    uint64_t now = nanos64_real();
+
+    out += (now - last) * simRate;
+    last = now;
+
+    return out * 1e-3;
+//    return micros64_real();
+}
+static uint64_t millis64(void) {
+    static uint64_t last = 0;
+    static uint64_t out = 0;
+    uint64_t now = nanos64_real();
+
+    out += (now - last) * simRate;
+    last = now;
+
+    return out * 1e-6;
+//    return millis64_real();
+}
+
+static uint32_t sitl_micros(void) {
+    return micros64() & 0xFFFFFFFF;
+}
+
+static uint32_t sitl_millis(void) {
+    return millis64() & 0xFFFFFFFF;
+}
+
+/*********** MSP Functions *****************/
 
 /**
  * generate response for command requestet on msp
@@ -226,80 +335,6 @@ void msp_initialize(void) {
     initDebug(&mspDebugData);
 }
 
-static int64_t nanos64_real(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (ts.tv_sec * 1e9 + ts.tv_nsec) - (start_time.tv_sec * 1e9 + start_time.tv_nsec);
-}
-//static uint64_t micros64_real() {
-//    struct timespec ts;
-//    clock_gettime(CLOCK_MONOTONIC, &ts);
-//    return 1.0e6 * ((ts.tv_sec + (ts.tv_nsec * 1.0e-9)) - (start_time.tv_sec + (start_time.tv_nsec * 1.0e-9)));
-//}
-//
-//static uint64_t millis64_real() {
-//    struct timespec ts;
-//    clock_gettime(CLOCK_MONOTONIC, &ts);
-//    return 1.0e3 * ((ts.tv_sec + (ts.tv_nsec * 1.0e-9)) - (start_time.tv_sec + (start_time.tv_nsec * 1.0e-9)));
-//}
-
-/**
- * thread waiting for tcp connection and sending and rec data
- * @param data
- */
-static void* tcpThread(void* data) {
-    printf("--- MSP-Thread started!!\n");
-    while (workerRunning) {
-        if (!tcpSerialPort.connected) {
-            printf("--- MSP wait for connection\n");
-            int connfd = accept(tcpSerialPort.serverfd, (struct sockaddr*) NULL, NULL);
-            int status = fcntl(connfd, F_SETFL, fcntl(connfd, F_GETFL, 0) | O_NONBLOCK);
-
-            if (status == -1) {
-                perror("calling fcntl");
-                // handle the error.  By the way, I've never seen fcntl fail in this way
-            }
-            tcpSerialPort.connected = true;
-            tcpSerialPort.connfd = connfd;
-            printf("--- MSP client connected \n");
-        }
-        sleep(1);
-    }
-
-    printf("tcpThread end!!\n");
-    return NULL;
-}
-static uint64_t micros64(void) {
-    static uint64_t last = 0;
-    static uint64_t out = 0;
-    uint64_t now = nanos64_real();
-
-    out += (now - last) * simRate;
-    last = now;
-
-    return out * 1e-3;
-//    return micros64_real();
-}
-static uint64_t millis64(void) {
-    static uint64_t last = 0;
-    static uint64_t out = 0;
-    uint64_t now = nanos64_real();
-
-    out += (now - last) * simRate;
-    last = now;
-
-    return out * 1e-6;
-//    return millis64_real();
-}
-
-static uint32_t sitl_micros(void) {
-    return micros64() & 0xFFFFFFFF;
-}
-
-static uint32_t sitl_millis(void) {
-    return millis64() & 0xFFFFFFFF;
-}
-
 void platform_initialize(void) {
     clock_gettime(CLOCK_MONOTONIC, &start_time);
     SystemCoreClock = 500 * 1e6; // fake 500MHz
@@ -313,6 +348,15 @@ void platform_initialize(void) {
         printf("Create tcpWorker error!\n");
         exit(1);
     }
+
+    ret = udpInit(&stateLink, NULL, UDP_SIM_PORT, true);
+    printf("start UDP server...%d\n", ret);
+
+    ret = pthread_create(&udpWorker, NULL, udpThread, NULL);
+    if (ret != 0) {
+        printf("Create udpWorker error!\n");
+        exit(1);
+    }
 }
 
 void interrupt_enable(void) {
@@ -321,6 +365,7 @@ void interrupt_enable(void) {
 
 void processMSP(void) {
     mspProcess(&mspPort);
+    sleep(1);
 }
 
 void sensor_initialize(void) {
