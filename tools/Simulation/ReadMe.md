@@ -1,16 +1,13 @@
 bmflight Simulation Gazebo-ROS Interface
 ===============
----------------------------------------------------------
-
 # work in progress!!!
-
----------------------------------------------------------
 This ROS package is based on the CrazyS extension for the ROS package RotorS.
 
 For installing follow instruction under:
 https://github.com/gsilano/CrazyS/blob/master/README.md
 
 Here the excerpt for my setup:
+
 Installation Instructions - Ubuntu 18.04 with ROS Melodic and Gazebo 9
 ---------------------------------------------------------
 To use the code developed and stored in this repository some preliminary actions are needed. They are listed below.
@@ -82,13 +79,17 @@ $ sudo apt-get update
 $ sudo apt-get install gazebo9 gazebo9-* ros-melodic-gazebo-*
 $ sudo apt upgrade
 ```
----------------------------------------------------------
 
-catkin build
-
+# building ROS package
+```
+$ catkin build
+```
 Source the package so it is available to ros
+```
 soure devel/setup.bash
-
-
+```
+# start simulation interface
 to start the testdrone use:
-roslaunch bmflight_simulation test.launch
+```
+$ roslaunch bmflight_simulation test.launch
+```
