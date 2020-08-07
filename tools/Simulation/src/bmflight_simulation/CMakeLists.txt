@@ -5,6 +5,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   mav_msgs
   sensor_msgs
+  rotors_control
 )
 
 

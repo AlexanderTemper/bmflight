@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <rotors_control/common.h>
 
 typedef struct {
     int fd;
@@ -79,10 +80,37 @@ int udpRecv(udpLink_t* link, void* data, size_t size, uint32_t timeout_ms) {
     ret = recvfrom(link->fd, data, size, 0, (struct sockaddr *) &link->recv, &len);
     return ret;
 }
+//typedef struct {
+//    float roll;
+//    float pitch;
+//    float yaw;
+//    double timestamp;
+//} attitude_t;
+//
+//
+//static attitude_t real;
+//void odometryCallback(const nav_msgs::OdometryConstPtr& odometry_msg) {
+//    ROS_INFO_ONCE("odometryCallback got first odometry message.");
+//    rotors_control::EigenOdometry odometry;
+//    rotors_control::eigenOdometryFromMsg(odometry_msg, &odometry);
+//    Eigen::Vector3d euler_angles;
+//    mav_msgs::getEulerAnglesFromQuaternion(odometry.orientation, &euler_angles);
+//
+//    real.roll = euler_angles.x() * (1800.0f / M_PI);
+//    real.pitch = euler_angles.y() * (1800.0f / M_PI);
+//    real.yaw = -euler_angles.z() * (1800.0f / M_PI);
+//
+//    if (real.yaw < 0) {
+//        real.yaw += 3600;
+//    }
+//
+//    real.timestamp = odometry_msg->header.stamp.toSec();
+//    //printf("odometry Data: [%f,%f,%f]\n", real.roll, real.pitch, real.yaw);
+//}
 
 static void imuCallback(const sensor_msgs::ImuConstPtr& imu_msg) {
 
-    ROS_INFO_ONCE("PositionController got first imu message.");
+    ROS_INFO_ONCE("imuCallback got first imu message.");
 
     // Angular velocities data
     float gyroX = imu_msg->angular_velocity.x;
@@ -105,6 +133,7 @@ static void imuCallback(const sensor_msgs::ImuConstPtr& imu_msg) {
     simPkg.imu_linear_acceleration_xyz[1] = imu_msg->linear_acceleration.y;
     simPkg.imu_linear_acceleration_xyz[2] = imu_msg->linear_acceleration.z;
 
+
     udpSend(&stateLink, &simPkg, sizeof(simPkg));
 
     //printf("IMU Data: gyro:%f %f %f acc:%f %f %f\n", gyroX, gyroY, gyroZ, accX, accY, accZ);
@@ -115,7 +144,7 @@ int main(int argc, char** argv) {
     ros::NodeHandle nh;
     ROS_INFO_ONCE("Started position controller");
     ros::Subscriber imu_sub;
-
+    ros::Subscriber odometry_sub;
     ros::V_string args;
     ros::removeROSArgs(argc, argv, args);
     if (args.size() != 2) {
@@ -123,7 +152,7 @@ int main(int argc, char** argv) {
         return 1;
     }
     std::string imu_topic = "/" + args.at(1) + "/imu";
-
+    std::string odometry_topic = "/" + args.at(1) + "/odometry_sensor1/odometry";
     std::cout << imu_topic << "\n";
 //
     ROS_INFO_ONCE("start UDP client...");
@@ -134,6 +163,7 @@ int main(int argc, char** argv) {
     }
 
     imu_sub = nh.subscribe(imu_topic, 1, imuCallback);
+    //odometry_sub = nh.subscribe(odometry_topic, 1, odometryCallback);
 //
 //
 //    ros::NodeHandle nh2;
