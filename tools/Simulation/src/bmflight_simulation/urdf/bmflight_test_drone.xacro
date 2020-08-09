@@ -5,14 +5,16 @@ for Quadrocopter Control by Jian Wang et al.) -->
   <xacro:property name="namespace" value="$(arg namespace)" />
   <xacro:property name="rotor_velocity_slowdown_sim" value="10" />
   <xacro:property name="use_mesh_file" value="true" />
-  <xacro:property name="mesh_file" value="package://bmflight_simulation/meshes/heisl.dae" />
+  <xacro:property name="mesh_file" value="package://bmflight_simulation/meshes/bmflight_test_drone.dae" />
   <xacro:property name="mass" value="0.68" /> <!-- [kg] -->
-  <xacro:property name="body_width" value="0.1" /> <!-- [m] -->
-  <xacro:property name="body_height" value="0.12" /> <!-- [m] -->
+  <xacro:property name="body_width" value="0.08" /> <!-- [m] -->
+  <xacro:property name="body_height" value="0.06" /> <!-- [m] -->
   <xacro:property name="mass_rotor" value="0.009" /> <!-- [kg] -->
-  <xacro:property name="arm_length" value="0.17" /> <!-- [m] -->
-  <xacro:property name="rotor_offset_top" value="0.01" /> <!-- [m] -->
-  <xacro:property name="radius_rotor" value="0.1" /> <!-- [m] -->
+  
+  <xacro:property name="rotor_offset_top" value="0.018" /> <!-- [m] -->
+  <xacro:property name="arm_length_x" value="0.0848" /> <!-- [m] -->
+  <xacro:property name="arm_length_y" value="0.1015" /> <!-- [m] -->
+  <xacro:property name="radius_rotor" value="0.06" /> <!-- [m] -->
   <xacro:property name="motor_constant" value="8.54858e-06" /> <!-- [kg m/s^2] -->
   <xacro:property name="moment_constant" value="0.016" /> <!-- [m] -->
   <xacro:property name="time_constant_up" value="0.0125" /> <!-- [s] -->
@@ -48,8 +50,8 @@ for Quadrocopter Control by Jian Wang et al.) -->
   <!-- Instantiate rotors -->
   <xacro:vertical_rotor
     robot_namespace="${namespace}"
-    suffix="front"
-    direction="cw"
+    suffix="front_right"
+    direction="ccw"
     motor_constant="${motor_constant}"
     moment_constant="${moment_constant}"
     parent="${namespace}/base_link"
@@ -64,14 +66,14 @@ for Quadrocopter Control by Jian Wang et al.) -->
     color="Red"
     use_own_mesh="false"
     mesh="">
-    <origin xyz="${arm_length} 0 ${rotor_offset_top}" rpy="0 0 0" />
+    <origin xyz="${arm_length_x} -${arm_length_y} ${rotor_offset_top}" rpy="0 0 0" />
     <xacro:insert_block name="rotor_inertia" />
   </xacro:vertical_rotor>
 
   <xacro:vertical_rotor
     robot_namespace="${namespace}"
-    suffix="left"
-    direction="ccw"
+    suffix="front_left"
+    direction="cw"
     motor_constant="${motor_constant}"
     moment_constant="${moment_constant}"
     parent="${namespace}/base_link"
@@ -83,17 +85,17 @@ for Quadrocopter Control by Jian Wang et al.) -->
     motor_number="1"
     rotor_drag_coefficient="${rotor_drag_coefficient}"
     rolling_moment_coefficient="${rolling_moment_coefficient}"
-    color="Blue"
+    color="Red"
     use_own_mesh="false"
     mesh="">
-    <origin xyz="0 ${arm_length} ${rotor_offset_top}" rpy="0 0 0" />
+    <origin xyz="${arm_length_x} ${arm_length_y} ${rotor_offset_top}" rpy="0 0 0" />
     <xacro:insert_block name="rotor_inertia" />
   </xacro:vertical_rotor>
 
   <xacro:vertical_rotor
     robot_namespace="${namespace}"
-    suffix="back"
-    direction="cw"
+    suffix="back_left"
+    direction="ccw"
     motor_constant="${motor_constant}"
     moment_constant="${moment_constant}"
     parent="${namespace}/base_link"
@@ -108,14 +110,14 @@ for Quadrocopter Control by Jian Wang et al.) -->
     color="Blue"
     use_own_mesh="false"
     mesh="">
-    <origin xyz="-${arm_length} 0 ${rotor_offset_top}" rpy="0 0 0" />
+    <origin xyz="-${arm_length_x} ${arm_length_y} ${rotor_offset_top}" rpy="0 0 0" />
     <xacro:insert_block name="rotor_inertia" />
   </xacro:vertical_rotor>
 
   <xacro:vertical_rotor
     robot_namespace="${namespace}"
-    suffix="right"
-    direction="ccw"
+    suffix="back_right"
+    direction="cw"
     motor_constant="${motor_constant}"
     moment_constant="${moment_constant}"
     parent="${namespace}/base_link"
@@ -130,7 +132,7 @@ for Quadrocopter Control by Jian Wang et al.) -->
     color="Blue"
     use_own_mesh="false"
     mesh="">
-    <origin xyz="0 -${arm_length} ${rotor_offset_top}" rpy="0 0 0" />
+    <origin xyz="-${arm_length_x} -${arm_length_y} ${rotor_offset_top}" rpy="0 0 0" />
     <xacro:insert_block name="rotor_inertia" />
   </xacro:vertical_rotor>
 
