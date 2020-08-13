@@ -1,4 +1,5 @@
 #include "common/debug.h"
+#include <string.h>
 
 static sendDebugFuncPtr debugFuncPtr;
 //static uint8_t debugBuffer[256];

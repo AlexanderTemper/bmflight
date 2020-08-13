@@ -12,15 +12,9 @@
 int main(void) {
 
     platform_initialize();
-
     serial_initialize();
-
     msp_initialize();
-
     sensor_initialize();
-
-
-
 
     interrupt_enable();
 

@@ -6,8 +6,6 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
@@ -22,13 +20,13 @@ static int write_tcp_imp(uint8_t *data, int len) {
 //        printf("send :%c [0x%x]\n", *buf, *buf);
 //        buf++;
 //    }
-    int send = write(tcpSerialPort->connfd, (const void *) data, len);
-    if (send <= 0) {
+    int status = send(tcpSerialPort->connfd, (const void *) data, len, MSG_NOSIGNAL);
+    if (status <= 0) {
         tcpSerialPort->connected = false;
         close(tcpSerialPort->connfd);
-        printf("--- MSP close connection\n");
+        printf("--- MSP close connection (no write)\n");
     }
-    return send;
+    return status;
 }
 static void write_tcp(void) {
     serialPort_t *instance = serialPort;
@@ -79,7 +77,7 @@ static void read_tcp(void) {
         if (result == 0) {
             tcpSerialPort->connected = false;
             close(tcpSerialPort->connfd);
-            printf("--- MSP close connection\n");
+            printf("--- MSP close connection (no read)\n");
         }
         //printf("result %d \n", result);
         if (result != 1) {
@@ -204,7 +202,6 @@ void tcp_initialize_client(tcpPort_t *s) {
     }
 }
 void tcp_initialize_server(tcpPort_t *s) {
-
     if (pthread_mutex_init(&s->txLock, NULL) != 0) {
         fprintf(stderr, "TX mutex init failed - %d\n", errno);
         exit(1);

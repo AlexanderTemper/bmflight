@@ -2,6 +2,8 @@
 
 #include "global.h"
 
+// time difference
+typedef int32_t timeDelta_t;
 // millisecond time (wrap around 50days)
 typedef uint32_t timeMs_t;
 // microseconds time (wrap around 71 minutes)

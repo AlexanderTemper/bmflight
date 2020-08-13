@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <string.h>
+
 
 
 typedef enum {
@@ -10,6 +10,3 @@ typedef enum {
     Y,
     Z
 } axis_e;
-
-
-//#include <stdio.h> // TODO Weg
