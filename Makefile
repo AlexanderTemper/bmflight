@@ -27,12 +27,14 @@ INC_PATH += \
 	src
 # List of C source files.
 CSRCS += \
-	src/main.c	           \
-	src/common/debug.c     \
-	src/common/streambuf.c \
-	src/common/time.c      \
-	src/io/serial.c        \
-	src/msp/msp.c
+	src/main.c	              \
+	src/common/debug.c        \
+	src/common/streambuf.c    \
+	src/common/time.c         \
+	src/fc/tasks.c            \
+	src/io/serial.c           \
+	src/msp/msp.c             \
+	src/scheduler/scheduler.c
 
 # Add inlcude paths to preprocessor
 CPPFLAGS  += $(foreach INC,$(addprefix ./,$(INC_PATH)),-I$(INC))

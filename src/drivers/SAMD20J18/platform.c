@@ -11,7 +11,7 @@
 
 // common includes
 #include "platform.h"
-#include "fc.h"
+#include "fc/fc.h"
 #include "common/debug.h"
 #include "common/time.h"
 #include "io/serial.h"
@@ -225,6 +225,9 @@ static void gyroInit(void) {
     // 16.4 dps/lsb scalefactor
     gyroDev.scale = 1.0f / 16.4f;
 }
+inline static void bmf055_delayNanoSeconds(timeUs_t nsec) {
+
+}
 
 /***************************************************************
  *
@@ -265,7 +268,7 @@ void platform_initialize(void) {
     system_init();
     clock_initialize();
     tc_initialize();
-    initTime(&millis_samd20j18, &micros_samd20j18);
+    initTime(&millis_samd20j18, &micros_samd20j18, &bmf055_delayNanoSeconds);
 }
 
 void interrupt_enable(void) {

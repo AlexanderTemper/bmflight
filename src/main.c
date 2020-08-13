@@ -1,7 +1,9 @@
 #include "platform.h"
 
-#include "common/debug.h"
 #include "common/time.h"
+#include "scheduler/scheduler.h"
+#include "fc/tasks.h"
+
 
 //#include <stdio.h>
 //#include "dyad.h"
@@ -18,6 +20,8 @@ int main(void) {
 
     interrupt_enable();
 
+    tasksInit();
+
     // led inti
 //    struct port_config config_prt_pin;
 //    port_get_config_defaults(&config_prt_pin);
@@ -27,20 +31,14 @@ int main(void) {
 //    port_pin_set_config(LED_GRUEN, &config_prt_pin);
 //
 //    port_pin_set_output_level(LED_ROT, true);
-
-
-    timeMs_t now = millis();
-    timeMs_t next = now + 1000;
+//
+//    //
+//            processMSP();
+//            printDebug("hallo");
     /************************** Infinite Loop *******************************/
-    printDebug("\r\n\n------- Debug Build 3 -------\n\n\r");
     while (true) {
-        now = millis();
-        sensor_read();
-        processMSP();
-        if(now >= next){
-            next = now + 1000;
-            printDebug("sec \n");
-        }
+        scheduler();
+        delayNanoSeconds(50);
     }
 
 }

@@ -9,7 +9,7 @@
 
 // common includes
 #include "platform.h"
-#include "fc.h"
+#include "fc/fc.h"
 #include "common/debug.h"
 #include "common/time.h"
 #include "io/serial.h"
@@ -147,6 +147,14 @@ static uint32_t sitl_micros(void) {
 
 static uint32_t sitl_millis(void) {
     return millis64() & 0xFFFFFFFF;
+}
+
+static void sitl_delayNanoSeconds(timeUs_t nsec) {
+    struct timespec ts;
+    ts.tv_sec = 0;
+    ts.tv_nsec = nsec * 1UL;
+    while (nanosleep(&ts, &ts) == -1 && errno == EINTR) {
+    }
 }
 
 /*********** MSP Functions *****************/
@@ -340,7 +348,7 @@ void platform_initialize(void) {
     SystemCoreClock = 500 * 1e6; // fake 500MHz
     printf("[system]Init...\n");
 
-    initTime(&sitl_millis, &sitl_micros);
+    initTime(&sitl_millis, &sitl_micros, &sitl_delayNanoSeconds);
     tcp_initialize_server(&tcpSerialPort); //setup tcp Port
 
     int ret = pthread_create(&tcpWorker, NULL, tcpThread, NULL);
@@ -365,7 +373,6 @@ void interrupt_enable(void) {
 
 void processMSP(void) {
     mspProcess(&mspPort);
-    sleep(1);
 }
 
 void sensor_initialize(void) {
