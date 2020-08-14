@@ -3,6 +3,7 @@
 #include "common/time.h"
 #include "scheduler/scheduler.h"
 #include "fc/tasks.h"
+#include "fc/fc.h"
 
 
 //#include <stdio.h>
@@ -19,6 +20,8 @@ int main(void) {
     sensor_initialize();
 
     interrupt_enable();
+
+    initFC(); //set IMU
 
     tasksInit();
 

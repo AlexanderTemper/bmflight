@@ -135,11 +135,3 @@ void sensor_initialize(void) {
     InitSonsors(&sensors);
 }
 
-void sensor_read(void) {
-    sensors.acc.readFn(&sensors.acc);
-    sensor_read_gyro();
-}
-void sensor_read_gyro(void) {
-    sensors.gyro.readFn(&sensors.gyro);
-}
-

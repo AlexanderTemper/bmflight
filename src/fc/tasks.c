@@ -1,4 +1,6 @@
 #include "fc/tasks.h"
+#include "fc/fc.h"
+#include "imu/imu.h"
 
 #include "common/debug.h"
 #include "platform.h"
@@ -48,12 +50,28 @@ static void taskDebugSerial(timeUs_t currentTimeUs) {
     }
 }
 
+static void taskAttitude(timeUs_t currentTimeUs) {
+    sensors_t *sensors = getSonsors();
+    sensors->acc.readFn(&sensors->acc);
+    //todo filter task
+    sensors->acc.data[X] = sensors->acc.ADCRaw[X] * sensors->acc.scale;
+    sensors->acc.data[Y] = sensors->acc.ADCRaw[Y] * sensors->acc.scale;
+    sensors->acc.data[Z] = sensors->acc.ADCRaw[Z] * sensors->acc.scale;
+
+    updateEstimatedAttitude(currentTimeUs);
+}
+
 static void taskHandleSerial(timeUs_t currentTimeUs) {
     processMSP();
 }
 
 static void taskGYRO(timeUs_t currentTimeUs) {
-    sensor_read();
+    sensors_t *sensors = getSonsors();
+    //todo filter task
+    sensors->gyro.data[X] = sensors->gyro.ADCRaw[X] * sensors->gyro.scale;
+    sensors->gyro.data[Y] = sensors->gyro.ADCRaw[Y] * sensors->gyro.scale;
+    sensors->gyro.data[Z] = sensors->gyro.ADCRaw[Z] * sensors->gyro.scale;
+    sensors->gyro.readFn(&sensors->gyro);
 }
 
 static task_t tasks[TASK_COUNT] = {
@@ -76,7 +94,12 @@ static task_t tasks[TASK_COUNT] = {
         .taskName = "TASK_GYRO",
         .taskFunc = taskGYRO,
         .staticPriority = 200,
-        .desiredPeriodUs = TASK_PERIOD_HZ(500), } };
+        .desiredPeriodUs = TASK_PERIOD_HZ(500), },
+    [TASK_ATTITUDE] = {
+        .taskName = "TASK_ATTITUDE",
+        .taskFunc = taskAttitude,
+        .staticPriority = 100,
+        .desiredPeriodUs = TASK_PERIOD_HZ(250), } };
 
 /**
  * get the task with the given taskId or NULL on error
@@ -89,7 +112,8 @@ task_t *getTask(unsigned taskId) {
 
 void tasksInit(void) {
     schedulerInit();
-    //setTaskEnabled(TASK_DEBUG, true);
+    setTaskEnabled(TASK_DEBUG, true);
     setTaskEnabled(TASK_SERIAL, true);
     setTaskEnabled(TASK_GYRO, true);
+    setTaskEnabled(TASK_ATTITUDE, true);
 }

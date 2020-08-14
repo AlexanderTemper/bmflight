@@ -86,6 +86,15 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
         printf("get Version Data %d %d %d\n", version, version_major, version_minor);
         break;
     }
+    case MSP_ATTITUDE: {
+        int16_t att[3];
+        printf("\n get ATT");
+        for (int i = 0; i < 3; i++) {
+            att[i] = sbufReadU16(src);
+        }
+        printf(" %d %d %d\n", att[X], att[Y], att[Z]);
+        break;
+    }
     case MSP_RAW_IMU: {
         int16_t acc[3];
         int16_t gyro[3];
@@ -101,7 +110,7 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
     }
     case MSP_DEBUGMSG: {
         fwrite(src->ptr, 1, sbufBytesRemaining(src), stdout);
-        //printf("heisl\n");
+        //printf(" , ");
         break;
     }
     default:
@@ -134,8 +143,8 @@ int main(int argc, char *argv[]) {
 
     int inc = 0;
     while (1) {
-        if(inc == 1000){
-            mspSerialPush(&mspPort, MSP_RAW_IMU, 0, 0, MSP_DIRECTION_REQUEST);
+        if (inc == 4000) {
+            mspSerialPush(&mspPort, MSP_ATTITUDE, 0, 0, MSP_DIRECTION_REQUEST);
             inc = 0;
         }
 
@@ -145,7 +154,7 @@ int main(int argc, char *argv[]) {
 
         mspProcess(&mspPort);
         sleep(0.05);
-        inc ++;
+        inc++;
     }
     return 0;
 }

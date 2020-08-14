@@ -7,5 +7,4 @@
 #define BOARD_IDENTIFIER "BMFC"
 
 
-
-
+void initFC(void);

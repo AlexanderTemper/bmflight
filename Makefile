@@ -4,7 +4,7 @@ APP_NAME = BMF055FlightController
 
 EXE_FILE = bin/$(APP_NAME).out
 
-TARGET = SITL
+TARGET = BMF055
 BUILD_DIR := build/
 
 # Choose target MCU
@@ -36,6 +36,9 @@ CSRCS += \
 	src/msp/msp.c             \
 	src/msp/msp_commands.c    \
 	src/scheduler/scheduler.c \
+	src/fc/fc.c               \
+	src/imu/imu.c             \
+	src/imu/mahonyAHRS.cc     \
 	src/sensor/sensor.c
 
 # Add inlcude paths to preprocessor

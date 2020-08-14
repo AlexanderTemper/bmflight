@@ -16,4 +16,5 @@
 #define MSP_SET_RAW_RC 200
 #define MSP_BUILD_INFO 5
 #define MSP_RAW_IMU 102
+#define MSP_ATTITUDE 108    //out message         2 angles 1 heading
 

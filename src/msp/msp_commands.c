@@ -1,12 +1,11 @@
 #include <string.h>
 #include <math.h>
 
-
 #include "msp/msp_protocol.h"
 #include "msp/msp_commands.h"
 #include "fc/fc.h"
 #include "sensor/sensor.h"
-
+#include "imu/imu.h"
 
 /*********** MSP Functions *****************/
 
@@ -103,6 +102,12 @@ bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         for (int i = 0; i < 3; i++) {
             sbufWriteU16(dst, 100);
         }
+        break;
+    }
+    case MSP_ATTITUDE: {
+        sbufWriteU16(dst, attitutde_r);
+        sbufWriteU16(dst, attitutde_p);
+        sbufWriteU16(dst, attitutde_y);
         break;
     }
     default:

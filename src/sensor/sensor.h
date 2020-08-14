@@ -15,6 +15,7 @@ typedef struct accDev_s {
     int16_t ADCRaw[3];
     timeUs_t lastReadTime;
     float scale;
+    float data[3];
 } accDev_t;
 
 typedef struct gyroDev_s {
@@ -22,11 +23,13 @@ typedef struct gyroDev_s {
     int16_t ADCRaw[3];
     timeUs_t lastReadTime;
     float scale;
+    float data[3];
 } gyroDev_t;
 
 typedef struct sensors {
     gyroDev_t gyro;
     accDev_t acc;
+    float data[3];
 } sensors_t;
 
 
