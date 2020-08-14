@@ -55,17 +55,20 @@ static task_t tasks[TASK_COUNT] = {
         [TASK_SYSTEM] = {
                 .taskName = "TASK_SYSTEM",
             .taskFunc = taskSystemLoad,
+            .staticPriority = 0,
             .desiredPeriodUs = TASK_PERIOD_HZ(10),
         },
         [TASK_SERIAL] = {
             .taskName = "TASK_SERIAL",
             .taskFunc = taskHandleSerial,
-            .desiredPeriodUs = TASK_PERIOD_HZ(250),
+            .staticPriority = 1,
+            .desiredPeriodUs = TASK_PERIOD_HZ(100),
         },
         [TASK_DEBUG] = {
             .taskName = "TASK_DEBUG",
             .taskFunc = taskDebugSerial,
-            .desiredPeriodUs = TASK_PERIOD_HZ(1),
+            .staticPriority = 0,
+            .desiredPeriodUs = TASK_PERIOD_HZ(4),
         },
 };
 

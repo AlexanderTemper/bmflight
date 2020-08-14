@@ -2,7 +2,7 @@
 #include <unistd.h>
 
 #include "sput.h"
-#include "fc.h"
+#include "fc/fc.h"
 #include "io/serial.h"
 #include "msp/msp.h"
 #include "msp/msp_protocol.h"

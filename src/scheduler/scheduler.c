@@ -34,12 +34,19 @@ static task_t *queueNext(void) {
 }
 
 static bool queueAdd(task_t *task) { //TODO add Priority
-    if ((taskQueueSize >= TASK_COUNT)) {
+    if ((taskQueueSize >= TASK_COUNT) || queueContains(task)) {
         return false;
     }
-    taskQueueArray[taskQueueSize] = task;
-    taskQueueSize++;
-    return true;
+    for (int ii = 0; ii <= taskQueueSize; ++ii) {
+        if (taskQueueArray[ii] == NULL || taskQueueArray[ii]->staticPriority < task->staticPriority) {
+            memmove(&taskQueueArray[ii + 1], &taskQueueArray[ii], sizeof(task) * (taskQueueSize - ii));
+            taskQueueArray[ii] = task;
+            ++taskQueueSize;
+            return true;
+        }
+    }
+
+    return false;
 }
 
 static bool queueRemove(task_t *task) {
@@ -103,17 +110,20 @@ void getTaskInfo(taskId_e taskId, taskInfo_t * taskInfo) {
 #endif
 }
 
+task_t* getTaskQueueAt(uint8_t pos) {
+    return taskQueueArray[pos];
+}
+
 void scheduler(void) {
     const timeUs_t schedulerStartTimeUs = micros();
     timeUs_t currentTimeUs = schedulerStartTimeUs;
-    timeUs_t taskExecutionTimeUs = 0;
-    timeDelta_t taskRequiredTimeUs = 0;
     task_t *selectedTask = NULL;
     //printf("start was %d \t", currentTimeUs);
 
     for (task_t *task = queueFirst(); task != NULL; task = queueNext()) {
         // Select Task if time is expired
-        if (cmpTimeUs(micros(), task->lastExecutedAtUs) >= task->desiredPeriodUs) {
+        currentTimeUs = micros();
+        if (cmpTimeUs(currentTimeUs, task->lastExecutedAtUs) >= task->desiredPeriodUs) {
             selectedTask = task;
             break;
         }
@@ -123,15 +133,12 @@ void scheduler(void) {
 
     if (selectedTask) {
         //printf("select task %s\n",selectedTask->taskName);
-        // Add in the time spent so far in check functions and the scheduler logic
-        taskRequiredTimeUs += cmpTimeUs(micros(), currentTimeUs);
         // start Task
         schedulerExecuteTask(selectedTask, currentTimeUs);
-        taskRequiredTimeUs += cmpTimeUs(micros(), currentTimeUs);
     }
 }
 
-void taskSystemLoad(timeUs_t currentTimeUs) {//TODO
+void taskSystemLoad(timeUs_t currentTimeUs) {        //TODO
     // Calculate system load
     if (totalWaitingTasksSamples > 0) {
         //printf("taskSystemLoad: done %d nothing \n", totalWaitingTasksSamples);

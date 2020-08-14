@@ -1,6 +1,7 @@
 #include "common/debug.h"
 #include <string.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 static sendDebugFuncPtr debugFuncPtr;
 //static uint8_t debugBuffer[256];
@@ -15,13 +16,13 @@ void debugData(const uint8_t *data, uint16_t len) {
 
 void printInt16Debug(int16_t value) {
     char buffer[12];
-    sprintf(buffer, "%d", value);
+    sprintf(buffer, "%"PRId16, value);
     printDebug(buffer);
 }
 
 void printInt32Debug(int32_t value) {
     char buffer[12];
-    sprintf(buffer, "%ld", value);
+    sprintf(buffer, "%"PRId32, value);
     printDebug(buffer);
 }
 
