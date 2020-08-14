@@ -3,7 +3,7 @@
 #include "global.h"
 #include "common/time.h"
 
-//#define USE_TASK_STATISTICS
+#define USE_TASK_STATISTICS
 
 #if defined(USE_TASK_STATISTICS)
 #define TASK_STATS_MOVING_SUM_COUNT 32
@@ -16,6 +16,7 @@ typedef enum {
     TASK_SYSTEM = 0,
     TASK_SERIAL,
     TASK_DEBUG,
+    TASK_GYRO,
     /* Count of real tasks */
     TASK_COUNT,
 } taskId_e;
@@ -54,5 +55,5 @@ void getTaskInfo(taskId_e taskId, taskInfo_t * taskInfo);
 void setTaskEnabled(taskId_e taskId, bool enabled);
 void schedulerInit(void);
 void scheduler(void);
-
+uint16_t getSystemLoad(void);
 void taskSystemLoad(timeUs_t currentTimeUs);

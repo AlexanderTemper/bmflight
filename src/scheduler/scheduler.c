@@ -2,7 +2,9 @@
 #include "fc/tasks.h"
 #include <string.h>
 
-static uint32_t totalWaitingTasksSamples;
+static timeUs_t schedulerTotalTimeUs = 0;
+static timeUs_t schedulerWorkTimeUs = 0;
+static uint16_t systemLoad = 0;
 static int taskQueuePos = 0;
 static int taskQueueSize = 0;
 static task_t* taskQueueArray[TASK_COUNT + 1]; // extra item for NULL pointer at end of queue
@@ -129,19 +131,19 @@ void scheduler(void) {
         }
     }
 
-    totalWaitingTasksSamples++;
-
     if (selectedTask) {
-        //printf("select task %s\n",selectedTask->taskName);
-        // start Task
         schedulerExecuteTask(selectedTask, currentTimeUs);
+        schedulerWorkTimeUs += cmpTimeUs(micros(),schedulerStartTimeUs);
     }
-}
+    schedulerTotalTimeUs += cmpTimeUs(micros(),schedulerStartTimeUs);
 
-void taskSystemLoad(timeUs_t currentTimeUs) {        //TODO
+}
+uint16_t getSystemLoad(void) {
+    return systemLoad;
+}
+void taskSystemLoad(timeUs_t currentTimeUs) {
     // Calculate system load
-    if (totalWaitingTasksSamples > 0) {
-        //printf("taskSystemLoad: done %d nothing \n", totalWaitingTasksSamples);
-        totalWaitingTasksSamples = 0;
-    }
+    systemLoad = (100 * schedulerWorkTimeUs) / (schedulerTotalTimeUs);
+    schedulerWorkTimeUs = 0;
+    schedulerTotalTimeUs = 0;
 }
