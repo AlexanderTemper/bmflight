@@ -35,7 +35,7 @@ static task_t *queueNext(void) {
     return taskQueueArray[++taskQueuePos]; // guaranteed to be NULL at end of queue
 }
 
-static bool queueAdd(task_t *task) { //TODO add Priority
+static bool queueAdd(task_t *task) {
     if ((taskQueueSize >= TASK_COUNT) || queueContains(task)) {
         return false;
     }

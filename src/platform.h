@@ -9,4 +9,5 @@ void msp_initialize(void);
 void sensor_initialize(void);
 void processMSP(void);
 void sensor_read(void);
+void sensor_read_gyro(void);
 

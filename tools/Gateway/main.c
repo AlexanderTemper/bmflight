@@ -96,7 +96,7 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
         for (int i = 0; i < 3; i++) {
             gyro[i] = sbufReadU16(src);
         }
-        printf("get AccData [%d %d %d], GyroData [%d %d %d] \r", acc[X], acc[Y], acc[Z], gyro[X], gyro[Y], gyro[Z]);
+        printf("\n get AccData [%d %d %d], GyroData [%d %d %d]", acc[X], acc[Y], acc[Z], gyro[X], gyro[Y], gyro[Z]);
         break;
     }
     case MSP_DEBUGMSG: {
@@ -132,14 +132,20 @@ int main(int argc, char *argv[]) {
     mspPort.mspProcessReplyFnPtr = &mspFcProcessReply;
     mspInit(&mspPort, &serialInstance);
 
+    int inc = 0;
     while (1) {
-        //mspSerialPush(&mspPort, MSP_RAW_IMU, 0, 0, MSP_DIRECTION_REQUEST);
+        if(inc == 1000){
+            mspSerialPush(&mspPort, MSP_RAW_IMU, 0, 0, MSP_DIRECTION_REQUEST);
+            inc = 0;
+        }
+
         if (uart) {
             update_read(&serialInstance);
         }
 
         mspProcess(&mspPort);
         sleep(0.05);
+        inc ++;
     }
     return 0;
 }

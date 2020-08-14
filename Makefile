@@ -34,7 +34,9 @@ CSRCS += \
 	src/fc/tasks.c            \
 	src/io/serial.c           \
 	src/msp/msp.c             \
-	src/scheduler/scheduler.c
+	src/msp/msp_commands.c    \
+	src/scheduler/scheduler.c \
+	src/sensor/sensor.c
 
 # Add inlcude paths to preprocessor
 CPPFLAGS  += $(foreach INC,$(addprefix ./,$(INC_PATH)),-I$(INC))

@@ -89,7 +89,7 @@ task_t *getTask(unsigned taskId) {
 
 void tasksInit(void) {
     schedulerInit();
-    setTaskEnabled(TASK_DEBUG, true);
+    //setTaskEnabled(TASK_DEBUG, true);
     setTaskEnabled(TASK_SERIAL, true);
     setTaskEnabled(TASK_GYRO, true);
 }

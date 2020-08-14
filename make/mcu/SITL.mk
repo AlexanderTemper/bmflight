@@ -20,7 +20,7 @@ INC_PATH += \
 CSRCS += \
 	src/drivers/SITL/serial_tcp.c  \
 	src/drivers/SITL/platform.c    \
-	src/drivers/SITL/udplink.c    \
+	src/drivers/SITL/udplink.c
 	
 	
 LDFLAGS += -lm -lpthread -lc -lrt

@@ -99,7 +99,7 @@ CSRCS += \
 	
 	
 CSRCS += \
-	src/drivers/SAMD20J18/platform.c
+	src/drivers/SAMD20J18/platform.c \
 
 #------------------------------ Compiler --------------------------------
 CC := arm-none-eabi-gcc

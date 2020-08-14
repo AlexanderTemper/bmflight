@@ -125,14 +125,15 @@ static void imuCallback(const sensor_msgs::ImuConstPtr& imu_msg) {
     sim_packet simPkg;
     simPkg.timestamp = imu_msg->header.stamp.toSec();
 
-    simPkg.imu_angular_velocity_rpy[0] = imu_msg->angular_velocity.x;
-    simPkg.imu_angular_velocity_rpy[1] = imu_msg->angular_velocity.y;
-    simPkg.imu_angular_velocity_rpy[2] = imu_msg->angular_velocity.z;
+    simPkg.imu_angular_velocity_rpy[0] = imu_msg->angular_velocity.x*16.3835;
+    simPkg.imu_angular_velocity_rpy[1] = imu_msg->angular_velocity.y*16.3835;
+    simPkg.imu_angular_velocity_rpy[2] = imu_msg->angular_velocity.z*16.3835;
 
-    simPkg.imu_linear_acceleration_xyz[0] = imu_msg->linear_acceleration.x;
-    simPkg.imu_linear_acceleration_xyz[1] = imu_msg->linear_acceleration.y;
-    simPkg.imu_linear_acceleration_xyz[2] = imu_msg->linear_acceleration.z;
+    simPkg.imu_linear_acceleration_xyz[0] = (imu_msg->linear_acceleration.x/9.8)*1024;
+    simPkg.imu_linear_acceleration_xyz[1] = (imu_msg->linear_acceleration.y/9.8)*1024;
+    simPkg.imu_linear_acceleration_xyz[2] = (imu_msg->linear_acceleration.z/9.8)*1024;
 
+    //printf("IMU Data: gyro:%f %f %f acc:%f %f %f\n", gyroX, gyroY, gyroZ, simPkg.imu_linear_acceleration_xyz[0], simPkg.imu_linear_acceleration_xyz[1], simPkg.imu_linear_acceleration_xyz[2]);
 
     udpSend(&stateLink, &simPkg, sizeof(simPkg));
 
