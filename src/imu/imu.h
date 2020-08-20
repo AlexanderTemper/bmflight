@@ -4,13 +4,22 @@
 #include "sensor/sensor.h"
 
 typedef struct {
+    void (*init)(void);
     void (*update)(timeUs_t currentTime);
 } attitude_estimator_t;
+#define EULER_INITIALIZE  { { 0, 0, 0 } }
 
-extern int16_t attitutde_r;
-extern int16_t attitutde_p;
-extern int16_t attitutde_y;
+typedef union {
+    int16_t raw[3];
+    struct {
+        // absolute angle inclination in multiple of 0.1 degree    180 deg = 1800
+        int16_t roll;
+        int16_t pitch;
+        int16_t yaw;
+    } values;
+} attitudeEulerAngles_t;
 
+extern attitudeEulerAngles_t attitude;
 
 void initImu(attitude_estimator_t *est);
 void updateEstimatedAttitude(timeUs_t currentTime);

@@ -31,6 +31,7 @@ CSRCS += \
 	src/common/debug.c        \
 	src/common/streambuf.c    \
 	src/common/time.c         \
+	src/common/maths.c         \
 	src/fc/tasks.c            \
 	src/io/serial.c           \
 	src/msp/msp.c             \
@@ -39,6 +40,7 @@ CSRCS += \
 	src/fc/fc.c               \
 	src/imu/imu.c             \
 	src/imu/mahonyAHRS.cc     \
+	src/imu/betaflightIMU.c     \
 	src/sensor/sensor.c
 
 # Add inlcude paths to preprocessor

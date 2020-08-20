@@ -1,6 +1,6 @@
 #include <string.h>
-#include <math.h>
 
+#include "common/maths.h"
 #include "msp/msp_protocol.h"
 #include "msp/msp_commands.h"
 #include "fc/fc.h"
@@ -105,9 +105,9 @@ bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         break;
     }
     case MSP_ATTITUDE: {
-        sbufWriteU16(dst, attitutde_r);
-        sbufWriteU16(dst, attitutde_p);
-        sbufWriteU16(dst, attitutde_y);
+        sbufWriteU16(dst, DECIDEGREES_TO_DEGREES(attitude.values.roll));
+        sbufWriteU16(dst, DECIDEGREES_TO_DEGREES(attitude.values.pitch));
+        sbufWriteU16(dst, DECIDEGREES_TO_DEGREES(attitude.values.yaw));
         break;
     }
     default:

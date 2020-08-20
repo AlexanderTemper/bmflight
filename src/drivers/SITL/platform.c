@@ -30,7 +30,7 @@ static bool workerRunning = true;
 static sensors_t sensors;
 
 // buffer for serial interface
-#define BUFFER_SIZE 1400
+#define BUFFER_SIZE 256
 static uint8_t rxBuffer[BUFFER_SIZE];
 static uint8_t txBuffer[BUFFER_SIZE];
 

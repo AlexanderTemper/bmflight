@@ -39,6 +39,7 @@ static int set_interface_attribs(int fdd, int speed, int parity) {
     tty.c_cflag &= ~CSTOPB;
     tty.c_cflag &= ~CRTSCTS;
 
+    cfmakeraw(&tty); //Important so the terminal dont interpreate the data!!
     if (tcsetattr(fdd, TCSANOW, &tty) != 0) {
         return -1;
     }
@@ -75,7 +76,7 @@ void update_read(serialPort_t *instance) {
     int rdlen = read(fd, buffer, free); //read data from serial line into buffer
     for (int i = 0; i < rdlen; i++) {
         uint8_t data = buffer[i];
-        //printf("%c", data);
+        //printf(" %c[%d],", data, data);
         instance->rxBuffer[instance->rxBufferHead] = data;
         if (instance->rxBufferHead + 1 >= instance->rxBufferSize) {
             instance->rxBufferHead = 0;
