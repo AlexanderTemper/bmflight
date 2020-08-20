@@ -6,6 +6,8 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <rotors_control/common.h>
+#include <math.h>
+
 
 typedef struct {
     int fd;
@@ -125,9 +127,9 @@ static void imuCallback(const sensor_msgs::ImuConstPtr& imu_msg) {
     sim_packet simPkg;
     simPkg.timestamp = imu_msg->header.stamp.toSec();
 
-    simPkg.imu_angular_velocity_rpy[0] = imu_msg->angular_velocity.x*16.3835;
-    simPkg.imu_angular_velocity_rpy[1] = imu_msg->angular_velocity.y*16.3835;
-    simPkg.imu_angular_velocity_rpy[2] = imu_msg->angular_velocity.z*16.3835;
+    simPkg.imu_angular_velocity_rpy[0] = (imu_msg->angular_velocity.x*(180/M_PI))*16.3835;
+    simPkg.imu_angular_velocity_rpy[1] = (imu_msg->angular_velocity.y*(180/M_PI))*16.3835;
+    simPkg.imu_angular_velocity_rpy[2] = (imu_msg->angular_velocity.z*(180/M_PI))*16.3835;
 
     simPkg.imu_linear_acceleration_xyz[0] = (imu_msg->linear_acceleration.x/9.8)*1024;
     simPkg.imu_linear_acceleration_xyz[1] = (imu_msg->linear_acceleration.y/9.8)*1024;

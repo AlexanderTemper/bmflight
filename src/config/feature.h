@@ -40,6 +40,8 @@ typedef struct featureConfig_s {
     uint32_t enabledFeatures;
 } featureConfig_t;
 
+extern featureConfig_t featureConfig;
+
 bool featureIsEnabled(const uint32_t mask);
 void featureEnable(const uint32_t mask);
 void featureDisable(const uint32_t mask);

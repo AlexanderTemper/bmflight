@@ -1,9 +1,9 @@
 #include "fc/tasks.h"
 #include "fc/fc.h"
 #include "imu/imu.h"
-
-#include "common/debug.h"
 #include "platform.h"
+#include "common/debug.h"
+
 //#include <stdio.h> //TODO WEG !!!
 
 static void debugTask(taskId_e id) {
@@ -112,7 +112,7 @@ task_t *getTask(unsigned taskId) {
 
 void tasksInit(void) {
     schedulerInit();
-    setTaskEnabled(TASK_DEBUG, true);
+    //setTaskEnabled(TASK_DEBUG, true);
     setTaskEnabled(TASK_SERIAL, true);
     setTaskEnabled(TASK_GYRO, true);
     setTaskEnabled(TASK_ATTITUDE, true);

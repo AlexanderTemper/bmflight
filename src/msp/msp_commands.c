@@ -1,21 +1,44 @@
 #include <string.h>
 
 #include "common/maths.h"
+#include "config/feature.h"
 #include "msp/msp_protocol.h"
 #include "msp/msp_commands.h"
 #include "fc/fc.h"
+#include "fc/tasks.h"
 #include "sensor/sensor.h"
+#include "scheduler/scheduler.h"
 #include "imu/imu.h"
 
 /*********** MSP Functions *****************/
+/**
+ * function called when an reply is received on the msp interface
+ */
 
+static mspResult_e mspFcProcessOutCommandWithArg(uint8_t cmdMSP, sbuf_t *src, sbuf_t *dst) {
+    switch (cmdMSP) {
+    case MSP_BOXNAMES: {
+        //const int page = sbufBytesRemaining(src) ? sbufReadU8(src) : 0;
+        //serializeBoxReply(dst, page, &serializeBoxNameFn);
+    }
+        break;
+    case MSP_BOXIDS: {
+        //const int page = sbufBytesRemaining(src) ? sbufReadU8(src) : 0;
+        //  serializeBoxReply(dst, page, &serializeBoxPermanentIdFn);
+    }
+        break;
+    default:
+        return MSP_RESULT_CMD_UNKNOWN;
+    }
+    return MSP_RESULT_ACK;
+}
 /**
  * generate response for command requestet on msp
  * @param cmdMSP
  * @param dst
  * @return
  */
-bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
+static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
     switch (cmdMSP) {
     case MSP_BATTERY_CONFIG: //TODO
         sbufWriteU8(dst, (330 + 5) / 10);
@@ -27,6 +50,83 @@ bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         sbufWriteU16(dst, 330);
         sbufWriteU16(dst, 430);
         sbufWriteU16(dst, 350);
+        break;
+    case MSP_STATUS_EX:
+    case MSP_STATUS: {
+//https://github.com/betaflight/betaflight-configurator/blob/master/src/js/msp/MSPHelper.js
+//        FC.CONFIG.cycleTime = data.readU16();
+//        FC.CONFIG.i2cError = data.readU16();
+//        FC.CONFIG.activeSensors = data.readU16();
+//        FC.CONFIG.mode = data.readU32();
+//        FC.CONFIG.profile = data.readU8();
+//        FC.CONFIG.cpuload = data.readU16();
+//        if (semver.gte(FC.CONFIG.apiVersion, "1.16.0")) {
+//            FC.CONFIG.numProfiles = data.readU8();
+//            FC.CONFIG.rateProfile = data.readU8();
+//
+//            if (semver.gte(FC.CONFIG.apiVersion, "1.36.0")) {
+//              // Read flight mode flags
+//              var byteCount = data.readU8();
+//              for (let i = 0; i < byteCount; i++) {
+//                data.readU8();
+//              }
+//
+//              // Read arming disable flags
+//              FC.CONFIG.armingDisableCount = data.readU8(); // Flag count
+//              FC.CONFIG.armingDisableFlags = data.readU32();
+//            }
+//
+//            TABS.pid_tuning.checkUpdateProfile(true);
+//        }
+//
+//        sensor_status(FC.CONFIG.activeSensors);
+//        $('span.i2c-error').text(FC.CONFIG.i2cError);
+//        $('span.cycle-time').text(FC.CONFIG.cycleTime);
+//        $('span.cpu-load').text(i18n.getMessage('statusbar_cpu_load', [FC.CONFIG.cpuload]));
+//        break;
+
+//        { BOXARM, "ARM", 0 },
+//        { BOXANGLE, "ANGLE", 1 },
+//        { BOXHORIZON, "HORIZON", 2 },
+
+        taskInfo_t taskInfo;
+        getTaskInfo(TASK_ATTITUDE, &taskInfo);
+        sbufWriteU16(dst, taskInfo.averageDeltaTimeUs); // TODO not Real Cycle Time
+        sbufWriteU16(dst, 0); // i2c errors
+        //gyro,range,gps,mag,baro,acc
+        bool gyro = true;
+        bool range = false;
+        bool gps = false;
+        bool mag = false;
+        bool baro = true;
+        bool acc = true;
+        sbufWriteU16(dst, (acc | baro << 0 | mag << 2 | gps << 3 | range << 4 | gyro << 5)); //sensors
+
+        sbufWriteU32(dst, 0); // unconditional part of flags, first 32 bits
+
+        sbufWriteU8(dst, 0);        //getCurrentPidProfileIndex());
+        sbufWriteU16(dst, getSystemLoad());
+        if (cmdMSP == MSP_STATUS_EX) {
+            sbufWriteU8(dst, 0);        //PID_PROFILE_COUNT);
+            sbufWriteU8(dst, 0);        //getCurrentControlRateProfileIndex());
+        } else {  // MSP_STATUS
+            taskInfo_t taskInfoGyro;
+            getTaskInfo(TASK_GYRO, &taskInfoGyro);
+            sbufWriteU16(dst, taskInfoGyro.averageDeltaTimeUs);
+            sbufWriteU16(dst, 0); // gyro cycle time
+        }
+
+        // write flightModeFlags header. Lowest 4 bits contain number of bytes that follow
+        // header is emited even when all bits fit into 32 bits to allow future extension
+        sbufWriteU8(dst, 0);
+
+        // Write arming disable flags
+        // 1 byte, flag count
+        sbufWriteU8(dst, 0);                //ARMING_DISABLE_FLAGS_COUNT);
+        // 4 bytes, flags
+        //const uint32_t armingDisableFlags = getArmingDisableFlags();
+        sbufWriteU32(dst, 0);               //armingDisableFlags);
+    }
         break;
     case MSP_API_VERSION:
         sbufWriteU8(dst, MSP_PROTOCOL_VERSION);
@@ -89,7 +189,7 @@ bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         sbufWriteU32(dst, 2);
         break;
     case MSP_FEATURE_CONFIG:
-        sbufWriteU32(dst, 0); //Todo
+        sbufWriteU32(dst, featureConfig.enabledFeatures);
         break;
     case MSP_RAW_IMU: {
         sensors_t *s = getSonsors();
@@ -105,11 +205,23 @@ bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         break;
     }
     case MSP_ATTITUDE: {
-        sbufWriteU16(dst, DECIDEGREES_TO_DEGREES(attitude.values.roll));
-        sbufWriteU16(dst, DECIDEGREES_TO_DEGREES(attitude.values.pitch));
+        sbufWriteU16(dst, attitude.values.roll);
+        sbufWriteU16(dst, attitude.values.pitch);
         sbufWriteU16(dst, DECIDEGREES_TO_DEGREES(attitude.values.yaw));
         break;
     }
+    case MSP_NAME: {
+        const char pilotname[] = "AlexBETA";
+        const int nameLen = strlen(pilotname);
+        for (int i = 0; i < nameLen; i++) {
+            sbufWriteU8(dst, pilotname[i]);
+        }
+    }
+        break;
+    case MSP_MIXER_CONFIG:
+            sbufWriteU8(dst, 3); //QUADX
+            sbufWriteU8(dst, 0);
+            break;
     default:
         return false;
     }
@@ -122,15 +234,13 @@ bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
  * @param src
  * @return
  */
-mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
+static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
     //const unsigned int dataSize = sbufBytesRemaining(src);
     switch (cmdMSP) {
     case MSP_SET_RAW_RC:
         //todo
         break;
     default:
-        //printf("Command not found");
-        // we do not know how to handle the (valid) message, indicate error MSP $M!
         return MSP_RESULT_ERROR;
     }
     return MSP_RESULT_ACK;
@@ -152,15 +262,14 @@ mspResult_e mspFcProcessCommand(mspPacket_t *cmd, mspPacket_t *reply) {
 
     if (mspProcessOutCommand(cmdMSP, dst)) {
         ret = MSP_RESULT_ACK;
+    } else if ((ret = mspFcProcessOutCommandWithArg(cmdMSP, src, dst)) != MSP_RESULT_CMD_UNKNOWN) {
+        /* ret */;
     } else {
         ret = mspProcessInCommand(cmdMSP, src);
     }
     reply->result = ret;
     return ret;
 }
-/**
- * function called when an reply is received on the msp interface
- */
 void mspFcProcessReply(mspPacket_t *cmd) {
     //no Master so nothing to do here
 }

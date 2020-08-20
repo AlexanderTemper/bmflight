@@ -16,5 +16,14 @@
 #define MSP_SET_RAW_RC 200
 #define MSP_BUILD_INFO 5
 #define MSP_RAW_IMU 102
-#define MSP_ATTITUDE 108    //out message         2 angles 1 heading
+#define MSP_ATTITUDE 108   //out message         2 angles 1 heading
+#define MSP_BOXNAMES 116    //out message         the aux switch names
+#define MSP_BOXIDS   119   //out message         get the permanent IDs associated to BOXes
+#define MSP_STATUS   101    //out message         cycletime & errors_count & sensor present & box activation & current setting number
+// Additional commands that are not compatible with MultiWii
+#define MSP_STATUS_EX 150    //out message         cycletime, errors_count, CPU load, sensor present etc
 
+#define MSP_NAME                        10   //out message          Returns user set board name - betaflight
+#define MSP_MOTOR                104    //out message         motors
+#define MSP_MOTOR_CONFIG         131    //out message         Motor configuration (min/max throttle, etc)
+#define MSP_MIXER_CONFIG                42

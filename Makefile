@@ -28,10 +28,11 @@ INC_PATH += \
 # List of C source files.
 CSRCS += \
 	src/main.c	              \
+	src/config/feature.c        \
 	src/common/debug.c        \
 	src/common/streambuf.c    \
 	src/common/time.c         \
-	src/common/maths.c         \
+	src/common/maths.c        \
 	src/fc/tasks.c            \
 	src/io/serial.c           \
 	src/msp/msp.c             \

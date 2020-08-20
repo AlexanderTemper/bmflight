@@ -22,9 +22,6 @@ STATIC_UNIT_TESTED quaternion q = QUATERNION_INITIALIZE;
 
 STATIC_UNIT_TESTED quaternionProducts qP = QUATERNION_PRODUCTS_INITIALIZE;
 
-// absolute angle inclination in multiple of 0.1 degree    180 deg = 1800
-attitudeEulerAngles_t attitude = EULER_INITIALIZE;
-
 uint16_t dcm_kp = 0.25f; // DCM filter proportional gain
 uint16_t dcm_ki = 0.0f;    // DCM filter integral gain
 uint8_t small_angle = 25;

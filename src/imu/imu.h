@@ -4,9 +4,9 @@
 #include "sensor/sensor.h"
 
 typedef struct {
-    void (*init)(void);
     void (*update)(timeUs_t currentTime);
 } attitude_estimator_t;
+
 #define EULER_INITIALIZE  { { 0, 0, 0 } }
 
 typedef union {
@@ -21,5 +21,5 @@ typedef union {
 
 extern attitudeEulerAngles_t attitude;
 
-void initImu(attitude_estimator_t *est);
+void initImu(void);
 void updateEstimatedAttitude(timeUs_t currentTime);
