@@ -29,7 +29,6 @@ typedef struct gyroDev_s {
 typedef struct sensors {
     gyroDev_t gyro;
     accDev_t acc;
-    float data[3];
 } sensors_t;
 
 

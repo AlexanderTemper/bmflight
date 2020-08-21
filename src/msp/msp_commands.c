@@ -155,10 +155,11 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         sbufWriteU16(dst, 0);
         break;
     case MSP_DEBUG: {
-        int16_t debug[4]; //todo
-        for (int i = 0; i < 4; i++) {
-            sbufWriteU16(dst, debug[i]);      // 4 variables are here for general monitoring purpose
-        }
+        sensors_t *s = getSonsors();
+        sbufWriteU16(dst,s->gyro.ADCRaw[X]);
+        sbufWriteU16(dst,s->gyro.ADCRaw[Y]);
+        sbufWriteU16(dst,s->gyro.ADCRaw[Z]);
+        sbufWriteU16(dst,0);
         break;
     }
     case MSP_DATAFLASH_SUMMARY:
@@ -174,8 +175,7 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         //FEATURE_RX_MSP
         sbufWriteU32(dst, 1 << 14);
         break;
-        //some weird scaling for Betaflight configurator
-    case MSP_RAW_IMU: {
+    case MSP_RAW_IMU: {//some weird scaling for Betaflight configurator
         sensors_t *s = getSonsors();
         for (int i = 0; i < 3; i++) {
             sbufWriteU16(dst, lrintf(s->acc.ADCRaw[i] / 2));

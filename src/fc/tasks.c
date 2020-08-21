@@ -67,11 +67,11 @@ static void taskHandleSerial(timeUs_t currentTimeUs) {
 
 static void taskGYRO(timeUs_t currentTimeUs) {
     sensors_t *sensors = getSonsors();
+    sensors->gyro.readFn(&sensors->gyro);
     //todo filter task
     sensors->gyro.data[X] = sensors->gyro.ADCRaw[X] * sensors->gyro.scale;
     sensors->gyro.data[Y] = sensors->gyro.ADCRaw[Y] * sensors->gyro.scale;
     sensors->gyro.data[Z] = sensors->gyro.ADCRaw[Z] * sensors->gyro.scale;
-    sensors->gyro.readFn(&sensors->gyro);
 }
 
 static task_t tasks[TASK_COUNT] = {
