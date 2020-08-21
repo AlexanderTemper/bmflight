@@ -20,8 +20,8 @@ typedef struct {
 #define UDP_SIM_PORT 8810
 typedef struct {
     double timestamp;                   // in seconds
-    double imu_angular_velocity_rpy[3]; // rad/s -> range: +/- 8192; +/- 2000 deg/se
-    double imu_linear_acceleration_xyz[3];    // m/s/s NED, body frame -> sim 1G = 9.80665, FC 1G = 256
+    double imu_angular_velocity_rpy[3];
+    double imu_linear_acceleration_xyz[3];
     double imu_orientation_quat[4];     //w, x, y, z
     double velocity_xyz[3];             // m/s, earth frame
     double position_xyz[3];             // meters, NED from origin
@@ -126,6 +126,7 @@ static void imuCallback(const sensor_msgs::ImuConstPtr& imu_msg) {
 
     sim_packet simPkg;
     simPkg.timestamp = imu_msg->header.stamp.toSec();
+
 
     simPkg.imu_angular_velocity_rpy[0] = (imu_msg->angular_velocity.x*(180/M_PI))*16.3835;
     simPkg.imu_angular_velocity_rpy[1] = (imu_msg->angular_velocity.y*(180/M_PI))*16.3835;

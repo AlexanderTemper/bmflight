@@ -9,14 +9,23 @@ typedef uint32_t timeMs_t;
 // microseconds time (wrap around 71 minutes)
 typedef uint32_t timeUs_t;
 
-
-static inline timeDelta_t cmpTimeUs(timeUs_t a, timeUs_t b) { return (timeDelta_t)(a - b); }
 /**
- * init Time functions
+ * calculate time difference between a-b
+ * @param a
+ * @param b
+ * @return
+ */
+static inline timeDelta_t cmpTimeUs(timeUs_t a, timeUs_t b) {
+    return (timeDelta_t) (a - b);
+}
+
+/**
+ * init Time functions has to be called before other function of this module
  * @param millis
  * @param micros
  */
-void initTime(timeMs_t (*millis)(void), timeUs_t (*micros)(void), void (*delayMicroseconds)(timeUs_t time));
+void initTime(timeMs_t (*milliFnP)(void), timeUs_t (*microsFnP)(void), void (*delayNanoSecondsFnP)(uint32_t nsec));
+
 /**
  * returns the time in ms since start
  * @return

@@ -4,7 +4,7 @@
 #include "scheduler/scheduler.h"
 #include "fc/tasks.h"
 #include "fc/fc.h"
-
+#include "imu/imu.h"
 
 //#include <stdio.h>
 //#include "dyad.h"
@@ -21,7 +21,8 @@ int main(void) {
 
     interrupt_enable();
 
-    initFC(); //set IMU
+    initImu();
+    initFC();
 
     tasksInit();
 

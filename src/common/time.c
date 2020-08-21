@@ -3,8 +3,9 @@
 static timeMs_t (*milliFuncPtr)(void);
 static timeMs_t (*microsFuncPtr)(void);
 static void (*delayNanoSecondsFuncPtr)(timeUs_t time);
+
 /**
- * init Time functions
+ * init Time functions has to be called before other function of this module
  * @param millis
  * @param micros
  */

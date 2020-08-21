@@ -1,7 +1,6 @@
 #include <string.h>
 
 #include "common/maths.h"
-#include "config/feature.h"
 #include "msp/msp_protocol.h"
 #include "msp/msp_commands.h"
 #include "fc/fc.h"
@@ -11,27 +10,6 @@
 #include "imu/imu.h"
 
 /*********** MSP Functions *****************/
-/**
- * function called when an reply is received on the msp interface
- */
-
-static mspResult_e mspFcProcessOutCommandWithArg(uint8_t cmdMSP, sbuf_t *src, sbuf_t *dst) {
-    switch (cmdMSP) {
-    case MSP_BOXNAMES: {
-        //const int page = sbufBytesRemaining(src) ? sbufReadU8(src) : 0;
-        //serializeBoxReply(dst, page, &serializeBoxNameFn);
-    }
-        break;
-    case MSP_BOXIDS: {
-        //const int page = sbufBytesRemaining(src) ? sbufReadU8(src) : 0;
-        //  serializeBoxReply(dst, page, &serializeBoxPermanentIdFn);
-    }
-        break;
-    default:
-        return MSP_RESULT_CMD_UNKNOWN;
-    }
-    return MSP_RESULT_ACK;
-}
 /**
  * generate response for command requestet on msp
  * @param cmdMSP
@@ -133,6 +111,8 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         sbufWriteU8(dst, API_VERSION_MAJOR);
         sbufWriteU8(dst, API_VERSION_MINOR);
         break;
+    case MSP_BOXNAMES:
+        break;
     case MSP_FC_VARIANT:
         sbufWriteString(dst, FC_VARIANT);
         break;
@@ -181,6 +161,8 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         }
         break;
     }
+    case MSP_DATAFLASH_SUMMARY:
+        break;
     case MSP_DEBUGMSG:
         break;
     case MSP_UID:
@@ -189,18 +171,20 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         sbufWriteU32(dst, 2);
         break;
     case MSP_FEATURE_CONFIG:
-        sbufWriteU32(dst, featureConfig.enabledFeatures);
+        //FEATURE_RX_MSP
+        sbufWriteU32(dst, 1 << 14);
         break;
+        //some weird scaling for Betaflight configurator
     case MSP_RAW_IMU: {
         sensors_t *s = getSonsors();
         for (int i = 0; i < 3; i++) {
-            sbufWriteU16(dst, lrintf(s->acc.ADCRaw[i] * 100 * s->acc.scale));
+            sbufWriteU16(dst, lrintf(s->acc.ADCRaw[i] / 2));
         }
         for (int i = 0; i < 3; i++) {
-            sbufWriteU16(dst, lrintf(s->gyro.ADCRaw[i] * 100 * s->gyro.scale));
+            sbufWriteU16(dst, lrintf(s->gyro.ADCRaw[i] * s->gyro.scale * 4));
         }
         for (int i = 0; i < 3; i++) {
-            sbufWriteU16(dst, 100);
+            sbufWriteU16(dst, 0);
         }
         break;
     }
@@ -219,9 +203,9 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
     }
         break;
     case MSP_MIXER_CONFIG:
-            sbufWriteU8(dst, 3); //QUADX
-            sbufWriteU8(dst, 0);
-            break;
+        sbufWriteU8(dst, 3); //QUADX
+        sbufWriteU8(dst, 0);
+        break;
     default:
         return false;
     }
@@ -237,6 +221,12 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
 static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
     //const unsigned int dataSize = sbufBytesRemaining(src);
     switch (cmdMSP) {
+    case MSP_SET_RTC:
+        //todo
+        break;
+    case MSP_SET_ARMING_DISABLED:
+        //todo
+        break;
     case MSP_SET_RAW_RC:
         //todo
         break;
@@ -262,8 +252,6 @@ mspResult_e mspFcProcessCommand(mspPacket_t *cmd, mspPacket_t *reply) {
 
     if (mspProcessOutCommand(cmdMSP, dst)) {
         ret = MSP_RESULT_ACK;
-    } else if ((ret = mspFcProcessOutCommandWithArg(cmdMSP, src, dst)) != MSP_RESULT_CMD_UNKNOWN) {
-        /* ret */;
     } else {
         ret = mspProcessInCommand(cmdMSP, src);
     }
