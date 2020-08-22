@@ -16,7 +16,7 @@ typedef enum {
     TASK_SYSTEM = 0,
     TASK_SERIAL,
     TASK_DEBUG,
-    TASK_GYRO,
+    TASK_LOOP,
     TASK_ATTITUDE,
     /* Count of real tasks */
     TASK_COUNT,

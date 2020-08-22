@@ -1,5 +1,6 @@
 #include "fc/tasks.h"
 #include "fc/fc.h"
+#include "io/motor.h"
 #include "imu/imu.h"
 #include "platform.h"
 #include "common/debug.h"
@@ -65,41 +66,45 @@ static void taskHandleSerial(timeUs_t currentTimeUs) {
     processMSP();
 }
 
-static void taskGYRO(timeUs_t currentTimeUs) {
+static void taskLoop(timeUs_t currentTimeUs) {
     sensors_t *sensors = getSonsors();
     sensors->gyro.readFn(&sensors->gyro);
     //todo filter task
     sensors->gyro.data[X] = sensors->gyro.ADCRaw[X] * sensors->gyro.scale;
     sensors->gyro.data[Y] = sensors->gyro.ADCRaw[Y] * sensors->gyro.scale;
     sensors->gyro.data[Z] = sensors->gyro.ADCRaw[Z] * sensors->gyro.scale;
+    //run Pid
+
+    // get rc data and pid data and mix it
+    updateMotors();
 }
 
 static task_t tasks[TASK_COUNT] = {
-    [TASK_SYSTEM] = {
-        .taskName = "TASK_SYSTEM",
-        .taskFunc = taskSystemLoad,
-        .staticPriority = 2,
-        .desiredPeriodUs = TASK_PERIOD_HZ(10), },
-    [TASK_SERIAL] = {
-        .taskName = "TASK_SERIAL",
-        .taskFunc = taskHandleSerial,
-        .staticPriority = 1,
-        .desiredPeriodUs = TASK_PERIOD_HZ(100), },
     [TASK_DEBUG] = {
         .taskName = "TASK_DEBUG",
         .taskFunc = taskDebugSerial,
         .staticPriority = 0,
         .desiredPeriodUs = TASK_PERIOD_HZ(4), },
-    [TASK_GYRO] = {
-        .taskName = "TASK_GYRO",
-        .taskFunc = taskGYRO,
-        .staticPriority = 200,
-        .desiredPeriodUs = TASK_PERIOD_HZ(500), },
+    [TASK_SYSTEM] = {
+        .taskName = "TASK_SYSTEM",
+        .taskFunc = taskSystemLoad,
+        .staticPriority = 1,
+        .desiredPeriodUs = TASK_PERIOD_HZ(10), },
     [TASK_ATTITUDE] = {
         .taskName = "TASK_ATTITUDE",
         .taskFunc = taskAttitude,
-        .staticPriority = 100,
-        .desiredPeriodUs = TASK_PERIOD_HZ(250), } };
+        .staticPriority = 2,
+        .desiredPeriodUs = TASK_PERIOD_HZ(250), },
+    [TASK_LOOP] = {
+        .taskName = "TASK_LOOP",
+        .taskFunc = taskLoop,
+        .staticPriority = 200,
+        .desiredPeriodUs = TASK_PERIOD_HZ(500), },
+    [TASK_SERIAL] = {
+        .taskName = "TASK_SERIAL",
+        .taskFunc = taskHandleSerial,
+        .staticPriority = 4,
+        .desiredPeriodUs = TASK_PERIOD_HZ(100), } };
 
 /**
  * get the task with the given taskId or NULL on error
@@ -114,6 +119,6 @@ void tasksInit(void) {
     schedulerInit();
     //setTaskEnabled(TASK_DEBUG, true);
     setTaskEnabled(TASK_SERIAL, true);
-    setTaskEnabled(TASK_GYRO, true);
+    setTaskEnabled(TASK_LOOP, true);
     setTaskEnabled(TASK_ATTITUDE, true);
 }

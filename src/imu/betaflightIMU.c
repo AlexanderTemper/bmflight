@@ -16,11 +16,11 @@
 #define ATTITUDE_RESET_KP_GAIN    25.0     // dcmKpGain value to use during attitude reset
 #define ATTITUDE_RESET_ACTIVE_TIME 500000  // 500ms - Time to wait for attitude to converge at high gain
 
-STATIC_UNIT_TESTED float rMat[3][3];
+static float rMat[3][3];
 // quaternion of sensor frame relative to earth frame
-STATIC_UNIT_TESTED quaternion q = QUATERNION_INITIALIZE;
+static quaternion q = QUATERNION_INITIALIZE;
 
-STATIC_UNIT_TESTED quaternionProducts qP = QUATERNION_PRODUCTS_INITIALIZE;
+static quaternionProducts qP = QUATERNION_PRODUCTS_INITIALIZE;
 
 uint16_t dcm_kp = 0.25f; // DCM filter proportional gain
 uint16_t dcm_ki = 0.0f;    // DCM filter integral gain
@@ -53,7 +53,7 @@ static void imuQuaternionComputeProducts(quaternion *quat, quaternionProducts *q
     quatProd->zz = quat->z * quat->z;
 }
 
-STATIC_UNIT_TESTED void imuComputeRotationMatrix(void) {
+static void imuComputeRotationMatrix(void) {
     imuQuaternionComputeProducts(&q, &qP);
 
     rMat[0][0] = 1.0f - 2.0f * qP.yy - 2.0f * qP.zz;
@@ -182,7 +182,7 @@ static void imuMahonyAHRSupdate(float dt, float gx, float gy, float gz,
     imuComputeRotationMatrix();
 }
 
-STATIC_UNIT_TESTED void imuUpdateEulerAngles(void) {
+static void imuUpdateEulerAngles(void) {
     attitude.values.roll = lrintf(atan2_approx(rMat[2][1], rMat[2][2]) * (1800.0f / M_PIf));
     attitude.values.pitch = lrintf(((0.5f * M_PIf) - acos_approx(-rMat[2][0])) * (1800.0f / M_PIf));
     attitude.values.yaw = lrintf((-atan2_approx(rMat[1][0], rMat[0][0]) * (1800.0f / M_PIf)));

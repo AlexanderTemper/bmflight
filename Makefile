@@ -33,7 +33,9 @@ CSRCS += \
 	src/common/time.c         \
 	src/common/maths.c        \
 	src/fc/tasks.c            \
+	src/fc/controller.c       \
 	src/io/serial.c           \
+	src/io/motor.c            \
 	src/msp/msp.c             \
 	src/msp/msp_commands.c    \
 	src/scheduler/scheduler.c \

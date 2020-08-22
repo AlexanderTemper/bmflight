@@ -6,13 +6,14 @@
 #include "bma2x2_support.h"
 #include "tc_support.h"
 #include "usart_support.h"
-
+#include "motor_support.h"
 // common includes
 #include "platform.h"
 #include "fc/fc.h"
 #include "common/debug.h"
 #include "common/time.h"
 #include "io/serial.h"
+#include "io/motor.h"
 #include "msp/msp.h"
 #include "msp/msp_commands.h"
 #include "sensor/sensor.h"
@@ -114,9 +115,13 @@ void msp_initialize(void) {
 }
 
 void platform_initialize(void) {
+    //driver bootup
     system_init();
     clock_initialize();
     tc_initialize();
+    motor_initialize();
+    // api init
+    motorSetup(&motor_write);
     initTime(&millis_samd20j18, &micros_samd20j18, &bmf055_delayNanoSeconds);
 }
 

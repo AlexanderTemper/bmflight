@@ -8,7 +8,7 @@
 #include "sensor/sensor.h"
 #include "scheduler/scheduler.h"
 #include "imu/imu.h"
-
+#include "io/motor.h"
 /*********** MSP Functions *****************/
 /**
  * generate response for command requestet on msp
@@ -89,7 +89,7 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
             sbufWriteU8(dst, 0);        //getCurrentControlRateProfileIndex());
         } else {  // MSP_STATUS
             taskInfo_t taskInfoGyro;
-            getTaskInfo(TASK_GYRO, &taskInfoGyro);
+            getTaskInfo(TASK_LOOP, &taskInfoGyro);
             sbufWriteU16(dst, taskInfoGyro.averageDeltaTimeUs);
             sbufWriteU16(dst, 0); // gyro cycle time
         }
@@ -156,10 +156,10 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         break;
     case MSP_DEBUG: {
         sensors_t *s = getSonsors();
-        sbufWriteU16(dst,s->gyro.ADCRaw[X]);
-        sbufWriteU16(dst,s->gyro.ADCRaw[Y]);
-        sbufWriteU16(dst,s->gyro.ADCRaw[Z]);
-        sbufWriteU16(dst,0);
+        sbufWriteU16(dst, s->gyro.ADCRaw[X]);
+        sbufWriteU16(dst, s->gyro.ADCRaw[Y]);
+        sbufWriteU16(dst, s->gyro.ADCRaw[Z]);
+        sbufWriteU16(dst, 0);
         break;
     }
     case MSP_DATAFLASH_SUMMARY:
@@ -175,7 +175,7 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         //FEATURE_RX_MSP
         sbufWriteU32(dst, 1 << 14);
         break;
-    case MSP_RAW_IMU: {//some weird scaling for Betaflight configurator
+    case MSP_RAW_IMU: { //some weird scaling for Betaflight configurator
         sensors_t *s = getSonsors();
         for (int i = 0; i < 3; i++) {
             sbufWriteU16(dst, lrintf(s->acc.ADCRaw[i] / 2));
@@ -186,6 +186,17 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         for (int i = 0; i < 3; i++) {
             sbufWriteU16(dst, 0);
         }
+        break;
+    }
+    case MSP_ACC_TRIM: //TODO
+        sbufWriteU16(dst, 0);
+        sbufWriteU16(dst, 0);
+        break;
+    case MSP_MOTOR_CONFIG: {
+        config_t* config = getFcConfig();
+        sbufWriteU16(dst, config->MINTHROTTLE);
+        sbufWriteU16(dst, config->MAXTHROTTLE);
+        sbufWriteU16(dst, config->MINCOMMAND);
         break;
     }
     case MSP_ATTITUDE: {
@@ -199,6 +210,14 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         const int nameLen = strlen(pilotname);
         for (int i = 0; i < nameLen; i++) {
             sbufWriteU8(dst, pilotname[i]);
+        }
+    }
+        break;
+
+    case MSP_MOTOR: {
+        motors_t *motors = getCurrentMotor();
+        for (unsigned i = 0; i < 4; i++) {
+            sbufWriteU16(dst, motors->value[i]);
         }
     }
         break;
@@ -221,6 +240,15 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
 static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
     //const unsigned int dataSize = sbufBytesRemaining(src);
     switch (cmdMSP) {
+    case MSP_SET_MOTOR: {
+        motors_t motors;
+        for (int i = 0; i < 4; i++) {
+            int16_t read = sbufReadU16(src);
+            motors.value[i] = read;
+        }
+        testMotor(&motors);
+    }
+        break;
     case MSP_SET_RTC:
         //todo
         break;

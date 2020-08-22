@@ -12,6 +12,7 @@
 #include "common/debug.h"
 #include "common/time.h"
 #include "io/serial.h"
+#include "io/motor.h"
 #include "msp/msp_commands.h"
 #include "sensor/sensor.h"
 
@@ -190,6 +191,10 @@ static bool gyro_simRead(gyroDev_t *gyro) {
     return true;
 }
 
+static void motor_write_sim(motors_t *motors) {
+        //todo
+}
+
 
 /***************************************************************
  *
@@ -226,9 +231,12 @@ void msp_initialize(void) {
     initDebug(&mspDebugData);
 }
 
+
 void platform_initialize(void) {
     clock_gettime(CLOCK_MONOTONIC, &start_time);
     SystemCoreClock = 500 * 1e6; // fake 500MHz
+
+    motorSetup(&motor_write_sim);
     printf("[system]Init...\n");
 
     initTime(&sitl_millis, &sitl_micros, &sitl_delayNanoSeconds);

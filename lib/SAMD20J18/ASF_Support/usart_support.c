@@ -22,7 +22,7 @@ static void msp_usart_configure(void) {
     /* set USART Baudrate*/
     config_usart.baudrate = UINT32_C(115200);
     /* Set USART GCLK */
-    config_usart.generator_source = GCLK_GENERATOR_3;
+    config_usart.generator_source = GCLK_GENERATOR_2;
     /* Se USART MUX setting */
     config_usart.mux_setting = USART_RX_3_TX_2_XCK_3;
     /* Configure pad 0 for unused */
