@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
     int inc = 0;
     while (1) {
         if (inc == 4000) {
-            mspSerialPush(&mspPort, MSP_ATTITUDE, 0, 0, MSP_DIRECTION_REQUEST);
+            //mspSerialPush(&mspPort, MSP_ATTITUDE, 0, 0, MSP_DIRECTION_REQUEST);
             inc = 0;
         }
 
