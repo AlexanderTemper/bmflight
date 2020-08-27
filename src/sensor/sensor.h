@@ -20,7 +20,8 @@ typedef struct accDev_s {
 
 typedef struct gyroDev_s {
     sensorGyroReadFuncPtr readFn; // read 3 axis data function
-    int16_t ADCRaw[3];
+    int16_t raw[3];
+    int16_t filtered[3]; // 1Grad/s == 10
     timeUs_t lastReadTime;
     float scale;
     float data[3];

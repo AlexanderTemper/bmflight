@@ -3,7 +3,6 @@
 
 config_t fc_config;
 status_t fc_status;
-controller_t fc_controller;
 control_t fc_control;
 
 void initFC(void) {
@@ -20,16 +19,6 @@ void initFC(void) {
 
     // init status of fc
     fc_status.ARMED = false;
-
-    // init controller
-    fc_controller.axis[ROLL] = 0;
-    fc_controller.axis[PITCH] = 0;
-    fc_controller.axis[YAW] = 0;
-
-    fc_control.command[THROTTLE] = 0;
-    fc_control.command[ROLL] = 0;
-    fc_control.command[PITCH] = 0;
-    fc_control.command[YAW] = 0;
 }
 
 

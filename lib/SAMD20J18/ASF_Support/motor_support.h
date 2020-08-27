@@ -10,4 +10,4 @@ void motor_initialize(void);
 /**
  * write the motor values to the timer counter register
  */
-void motor_write(motors_t *motors);
+void motor_write(motors_command_t *motors);

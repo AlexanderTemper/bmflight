@@ -156,9 +156,9 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         break;
     case MSP_DEBUG: {
         sensors_t *s = getSonsors();
-        sbufWriteU16(dst, s->gyro.ADCRaw[X]);
-        sbufWriteU16(dst, s->gyro.ADCRaw[Y]);
-        sbufWriteU16(dst, s->gyro.ADCRaw[Z]);
+        sbufWriteU16(dst, s->gyro.raw[X]);
+        sbufWriteU16(dst, s->gyro.raw[Y]);
+        sbufWriteU16(dst, s->gyro.raw[Z]);
         sbufWriteU16(dst, 0);
         break;
     }
@@ -181,7 +181,7 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
             sbufWriteU16(dst, lrintf(s->acc.ADCRaw[i] / 2));
         }
         for (int i = 0; i < 3; i++) {
-            sbufWriteU16(dst, lrintf(s->gyro.ADCRaw[i] * s->gyro.scale * 4));
+            sbufWriteU16(dst, lrintf(s->gyro.raw[i] * s->gyro.scale * 4));
         }
         for (int i = 0; i < 3; i++) {
             sbufWriteU16(dst, 0);
@@ -215,7 +215,7 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         break;
 
     case MSP_MOTOR: {
-        motors_t *motors = getCurrentMotor();
+        motors_command_t *motors = &getFcControl()->motor_command;
         for (unsigned i = 0; i < 4; i++) {
             sbufWriteU16(dst, motors->value[i]);
         }
@@ -241,7 +241,7 @@ static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
     //const unsigned int dataSize = sbufBytesRemaining(src);
     switch (cmdMSP) {
     case MSP_SET_MOTOR: {
-        motors_t motors;
+        motors_command_t motors;
         for (int i = 0; i < 4; i++) {
             int16_t read = sbufReadU16(src);
             motors.value[i] = read;

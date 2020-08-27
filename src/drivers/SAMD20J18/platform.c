@@ -59,9 +59,9 @@ static bool bmg160Read(gyroDev_t *gyro) {
     if (bmg160_get_data_XYZ(&rawData) != 0) {
         return false;
     }
-    gyro->ADCRaw[X] = rawData.datax;
-    gyro->ADCRaw[Y] = rawData.datay;
-    gyro->ADCRaw[Z] = rawData.dataz;
+    gyro->raw[X] = rawData.datax;
+    gyro->raw[Y] = rawData.datay;
+    gyro->raw[Z] = rawData.dataz;
     gyro->lastReadTime = micros();
 
     return true;

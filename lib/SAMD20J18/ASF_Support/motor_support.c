@@ -1,6 +1,7 @@
 #include <tc.h>
 #include <tc_interrupt.h>
 #include "motor_support.h"
+#include "fc/fc.h"
 
 static struct tc_module tc_instance1, tc_instance2;
 static volatile bool tc_instance1_callback_flag; //indicates if tc has finished operation
@@ -52,10 +53,11 @@ void motor_initialize(void) {
     tc_instance2_callback_flag = true;
 }
 
-void motor_write(motors_t *motors) {
+void motor_write(motors_command_t *motors) {
+    config_t *fc_command = getFcConfig();
     if (tc_instance1_callback_flag && tc_instance2_callback_flag) {
         uint16_t timer_val = COUNT_MAX_16BIT - ONESHOT_MIN_PULSE;
-        if (!motors->oneShot)
+        if (!fc_command->motorOneShot)
             timer_val = COUNT_MAX_16BIT - PWM_MIN_PULSE;
 
         tc_set_count_value(&tc_instance1, timer_val);
@@ -64,7 +66,7 @@ void motor_write(motors_t *motors) {
         tc_instance1_callback_flag = false;
         tc_instance2_callback_flag = false;
 
-        if (!motors->oneShot) {
+        if (!fc_command->motorOneShot) {
             tc_set_compare_value(&tc_instance1, 0, COUNT_MAX_16BIT - PWM_MIN_PULSE + (motors->value[0] << 3));
             tc_set_compare_value(&tc_instance1, 1, COUNT_MAX_16BIT - PWM_MIN_PULSE + (motors->value[1] << 3));
             tc_set_compare_value(&tc_instance2, 0, COUNT_MAX_16BIT - PWM_MIN_PULSE + (motors->value[2] << 3));

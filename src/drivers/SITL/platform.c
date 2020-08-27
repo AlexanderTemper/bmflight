@@ -186,9 +186,9 @@ static bool gyro_simRead(gyroDev_t *gyro) {
 
     pthread_mutex_lock(&udpLock);
 
-    gyro->ADCRaw[X] = lastSimPkt.imu_angular_velocity_rpy[X];
-    gyro->ADCRaw[Y] = lastSimPkt.imu_angular_velocity_rpy[Y];
-    gyro->ADCRaw[Z] = lastSimPkt.imu_angular_velocity_rpy[Z];
+    gyro->raw[X] = lastSimPkt.imu_angular_velocity_rpy[X];
+    gyro->raw[Y] = lastSimPkt.imu_angular_velocity_rpy[Y];
+    gyro->raw[Z] = lastSimPkt.imu_angular_velocity_rpy[Z];
     gyro->lastReadTime = lastSimPkt.timestamp * 1000000;
 
     pthread_mutex_unlock(&udpLock);
@@ -196,7 +196,7 @@ static bool gyro_simRead(gyroDev_t *gyro) {
     return true;
 }
 
-static void motor_write_sim(motors_t *motors) {
+static void motor_write_sim(motors_command_t *motors) {
     pwmPkt.motor_speed[0] = motors->value[0];
     pwmPkt.motor_speed[1] = motors->value[1];
     pwmPkt.motor_speed[2] = motors->value[2];

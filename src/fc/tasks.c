@@ -4,6 +4,7 @@
 #include "imu/imu.h"
 #include "platform.h"
 #include "common/debug.h"
+#include "fc/rateController.h"
 
 //#include <stdio.h> //TODO WEG !!!
 
@@ -59,6 +60,10 @@ static void taskAttitude(timeUs_t currentTimeUs) {
     sensors->acc.data[Y] = sensors->acc.ADCRaw[Y] * sensors->acc.scale;
     sensors->acc.data[Z] = sensors->acc.ADCRaw[Z] * sensors->acc.scale;
 
+    sensors->gyro.data[X] = sensors->gyro.raw[X] * sensors->gyro.scale;
+    sensors->gyro.data[Y] = sensors->gyro.raw[Y] * sensors->gyro.scale;
+    sensors->gyro.data[Z] = sensors->gyro.raw[Z] * sensors->gyro.scale;
+
     updateEstimatedAttitude(currentTimeUs);
 }
 
@@ -68,14 +73,19 @@ static void taskHandleSerial(timeUs_t currentTimeUs) {
 
 static void taskLoop(timeUs_t currentTimeUs) {
     sensors_t *sensors = getSonsors();
+    control_t *fcControl = getFcControl();
+
     sensors->gyro.readFn(&sensors->gyro);
     //todo filter task
-    sensors->gyro.data[X] = sensors->gyro.ADCRaw[X] * sensors->gyro.scale;
-    sensors->gyro.data[Y] = sensors->gyro.ADCRaw[Y] * sensors->gyro.scale;
-    sensors->gyro.data[Z] = sensors->gyro.ADCRaw[Z] * sensors->gyro.scale;
+    sensors->gyro.filtered[X] = sensors->gyro.raw[X];
+    sensors->gyro.filtered[Y] = sensors->gyro.raw[Y];
+    sensors->gyro.filtered[Z] = sensors->gyro.raw[Z];
     //run Pid
+    updateRateController(&fcControl->rate_command, &sensors->gyro, &fcControl->mixer_command, currentTimeUs);
 
+    //printf("pid motor commands = [%d,%d,%d;%d]", motor_command->value[ROLL], motor_command->value[PITCH], motor_command->value[YAW], motor_command->value[THROTTLE]);
     // get rc data and pid data and mix it
+
     updateMotors();
 }
 
