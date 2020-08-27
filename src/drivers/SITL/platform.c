@@ -24,7 +24,7 @@ static tcpPort_t tcpSerialPort;
 static struct timespec start_time;
 uint32_t SystemCoreClock;
 static pthread_t tcpWorker, udpWorker;
-static udpLink_t stateLink;
+static udpLink_t stateLink, pwmLink;
 static pthread_mutex_t udpLock;
 static bool workerRunning = true;
 
@@ -48,6 +48,13 @@ typedef struct {
 
 sim_packet lastSimPkt;
 
+typedef struct {
+    double timestamp;                   // in seconds
+    uint16_t motor_speed[4]; // [1000-2000]
+} servo_packet;
+
+static servo_packet pwmPkt;
+
 /***************************************************************
  *
  *              local Functions
@@ -57,7 +64,6 @@ sim_packet lastSimPkt;
 //static void debugSerial(const uint8_t* data, uint16_t len) {
 //    serialWriteBuf(&serialInstance, data, len);
 //}
-
 /****************** Time **********************/
 static int64_t nanos64_real(void) {
     struct timespec ts;
@@ -122,9 +128,9 @@ static void updateState(const sim_packet * pkt) {
     const uint64_t realtime_now = micros64_real();
 
     if (realtime_now > last_realtime + 500 * 1e3) { // 500ms timeout
+        printf("Timeout Sim after %ld \n", (realtime_now - last_realtime) / 1000);
         last_timestamp = pkt->timestamp;
         last_realtime = realtime_now;
-        printf("Timeout Sim\n\n\n");
         return;
     }
 
@@ -138,7 +144,7 @@ static void updateState(const sim_packet * pkt) {
 //    printf("current: %d ,delta %d , hz: %f\n", sim_time_curr, sim_delta, 1000000 / (float) sim_delta);
 
     pthread_mutex_lock(&udpLock);
-    memcpy(&lastSimPkt, pkt, sizeof(lastSimPkt));
+    memcpy(&lastSimPkt, pkt, sizeof(sim_packet));
     pthread_mutex_unlock(&udpLock);
 
     last_timestamp = pkt->timestamp;
@@ -176,7 +182,6 @@ static bool acc_simRead(accDev_t *acc) {
     return true;
 }
 
-
 static bool gyro_simRead(gyroDev_t *gyro) {
 
     pthread_mutex_lock(&udpLock);
@@ -192,9 +197,14 @@ static bool gyro_simRead(gyroDev_t *gyro) {
 }
 
 static void motor_write_sim(motors_t *motors) {
-        //todo
-}
+    pwmPkt.motor_speed[0] = motors->value[0];
+    pwmPkt.motor_speed[1] = motors->value[1];
+    pwmPkt.motor_speed[2] = motors->value[2];
+    pwmPkt.motor_speed[3] = motors->value[3];
 
+    pwmPkt.timestamp = lastSimPkt.timestamp * 1000000;
+    udpSend(&pwmLink, &pwmPkt, sizeof(servo_packet));
+}
 
 /***************************************************************
  *
@@ -231,7 +241,6 @@ void msp_initialize(void) {
     initDebug(&mspDebugData);
 }
 
-
 void platform_initialize(void) {
     clock_gettime(CLOCK_MONOTONIC, &start_time);
     SystemCoreClock = 500 * 1e6; // fake 500MHz
@@ -249,9 +258,17 @@ void platform_initialize(void) {
     }
 
     ret = udpInit(&stateLink, NULL, UDP_SIM_PORT, true);
-    printf("start UDP server...%d\n", ret);
+    if (ret != 0) {
+        printf("Cannot create stateLink socket!\n");
+        exit(1);
+    }
     if (pthread_mutex_init(&udpLock, NULL) != 0) {
         fprintf(stderr, "udp init failed - %d\n", errno);
+        exit(1);
+    }
+    ret = udpInit(&pwmLink, "127.0.0.1", UDP_SIM_PORT + 1, false);
+    if (ret != 0) {
+        printf("Cannot create pwmLink socket!\n");
         exit(1);
     }
 
