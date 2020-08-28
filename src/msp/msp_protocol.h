@@ -18,6 +18,7 @@
 #define MSP_STATUS                101    //out message         cycletime & errors_count & sensor present & box activation & current setting number
 #define MSP_RAW_IMU               102
 #define MSP_MOTOR                 104    //out message         motors
+#define MSP_RC                    105    //out message         rc channels and more
 #define MSP_ATTITUDE              108    //out message         2 angles 1 heading
 #define MSP_ANALOG                110
 #define MSP_BOXNAMES              116    //out message         the aux switch names

@@ -144,7 +144,6 @@ static void* udpThread(void* data) {
     while (true) {
         int n = udpRecv(&pwmLink, &pwmPkt, sizeof(servo_packet), 100);
         if (n == sizeof(servo_packet)) {
-            //printf("get motor data %d %d %d %d\n", pwmPkt.motor_speed[0], pwmPkt.motor_speed[1], pwmPkt.motor_speed[2], pwmPkt.motor_speed[3]);
             mav_msgs::ActuatorsPtr actuator_msg(new mav_msgs::Actuators);
             actuator_msg->angular_velocities.clear();
             actuator_msg->angular_velocities.push_back(scale_angular_velocities(pwmPkt.motor_speed[0]));
@@ -157,6 +156,7 @@ static void* udpThread(void* data) {
             actuator_msg->header.stamp.nsec = current_time.nsec;
 
             actuators_pub.publish(actuator_msg);
+            printf("get motor data %d %d %d %d\n", pwmPkt.motor_speed[0], pwmPkt.motor_speed[1], pwmPkt.motor_speed[2], pwmPkt.motor_speed[3]);
         }
     }
 

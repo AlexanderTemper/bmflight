@@ -9,6 +9,7 @@
 #include "joy.h"
 #include "fc/tasks.h"
 #include "scheduler/scheduler.h"
+#include "common/streambuf.h"
 
 static struct timespec start_time;
 static serialPort_t serialInstance;
@@ -127,7 +128,23 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
 
 static void taskJoy(timeUs_t currentTimeUs) {
     readJoy();
-    //mspSerialPush(&mspPort, MSP_ATTITUDE, 0, 0, MSP_DIRECTION_REQUEST);
+
+//        for (int i = 0; i < RX_CHANL_COUNT; i++) {
+//            sbufWriteU16(dst, rx->chan[i]);
+//        }
+
+    uint8_t data[12];
+    sbuf_t buf;
+    sbufInit(&buf, &data[0], &data[12]);
+
+    sbufWriteU16(&buf, rx_joy.roll);
+    sbufWriteU16(&buf, rx_joy.pitch);
+    sbufWriteU16(&buf, rx_joy.yaw);
+    sbufWriteU16(&buf, rx_joy.throttle);
+    sbufWriteU16(&buf, rx_joy.arm);
+    sbufWriteU16(&buf, 5);
+
+    mspSerialPush(&mspPort, MSP_SET_RAW_RC, &data[0], 12, MSP_DIRECTION_REQUEST);
 }
 
 static void taskHandleSerial(timeUs_t currentTimeUs) {

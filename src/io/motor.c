@@ -105,7 +105,6 @@ void updateMotors(void) {
             motors_System->value[i] = motor_disarmed[i];
         }
     }
-
     //write motor data
     writeMotorFuncPtr(motors_System);
 }

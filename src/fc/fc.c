@@ -19,6 +19,11 @@ void initFC(void) {
 
     // init status of fc
     fc_status.ARMED = false;
+
+    fc_control.rx.chan[ROLL] = 1500;
+    fc_control.rx.chan[PITCH] = 1500;
+    fc_control.rx.chan[YAW] = 1500;
+    fc_control.rx.chan[THROTTLE] = 1000;
 }
 
 

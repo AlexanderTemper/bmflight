@@ -53,6 +53,6 @@ void updateRateController(rate_command_t *rateCommand, gyroDev_t *gyro, mixer_co
     mixerCommand->axis[PITCH] = calculatePID(rateError[PITCH]);
     mixerCommand->axis[YAW] = calculatePID(rateError[YAW]);
 
-    //printf("%d: in[%d,%d,%d] out[%d,%d,%d]", currentTime, rateCommand->axis[ROLL], rateCommand->axis[PITCH], rateCommand->axis[YAW], mixerCommand->axis[ROLL], mixerCommand->axis[PITCH], mixerCommand->axis[YAW]);
+    //printf("%d: in[%d,%d,%d] out[%d,%d,%d]\n", currentTime, rateCommand->axis[ROLL], rateCommand->axis[PITCH], rateCommand->axis[YAW], mixerCommand->axis[ROLL], mixerCommand->axis[PITCH], mixerCommand->axis[YAW]);
 }
 

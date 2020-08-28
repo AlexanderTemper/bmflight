@@ -202,6 +202,7 @@ static void motor_write_sim(motors_command_t *motors) {
     pwmPkt.motor_speed[2] = motors->value[2];
     pwmPkt.motor_speed[3] = motors->value[3];
 
+    //printf("write motor %d,%d,%d,%d\n",pwmPkt.motor_speed[0],pwmPkt.motor_speed[1],pwmPkt.motor_speed[2],pwmPkt.motor_speed[3]);
     pwmPkt.timestamp = lastSimPkt.timestamp * 1000000;
     udpSend(&pwmLink, &pwmPkt, sizeof(servo_packet));
 }

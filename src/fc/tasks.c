@@ -65,10 +65,30 @@ static void taskAttitude(timeUs_t currentTimeUs) {
     sensors->gyro.data[Y] = sensors->gyro.raw[Y] * sensors->gyro.scale;
     sensors->gyro.data[Z] = sensors->gyro.raw[Z] * sensors->gyro.scale;
 
+    //test rx direct
+    control_t *fcControl = getFcControl();
+    status_t *fcStatus = getFcStatus();
+
+    //Todo Timeout and cures......
+    if (fcControl->rx.chan[AUX1] > 1600) {
+        fcStatus->ARMED = true;
+    } else {
+        fcStatus->ARMED = false;
+    }
+    fcControl->fc_command.roll = fcControl->rx.chan[ROLL] - 1500;
+    fcControl->fc_command.pitch = fcControl->rx.chan[PITCH] - 1500;
+    fcControl->fc_command.yaw = fcControl->rx.chan[YAW] - 1500;
+    fcControl->fc_command.throttle = fcControl->rx.chan[THROTTLE];
+
+    fcControl->attitude_command.axis[ROLL] = fcControl->fc_command.roll;
+    fcControl->attitude_command.axis[PITCH] = fcControl->fc_command.pitch;
+    fcControl->attitude_command.axis[YAW] = fcControl->fc_command.yaw;
+
     updateEstimatedAttitude(currentTimeUs);
 
     // attitude controller
-    control_t *fcControl = getFcControl();
+
+    //printf("%d %d,%d,%d  %d\n", fcStatus->ARMED, fcControl->attitude_command.axis[ROLL], fcControl->attitude_command.axis[PITCH], fcControl->attitude_command.axis[YAW], fcControl->fc_command.throttle);
     updateAttitudeController(&fcControl->attitude_command, &attitude, &fcControl->rate_command, currentTimeUs);
 }
 

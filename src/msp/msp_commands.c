@@ -9,6 +9,7 @@
 #include "scheduler/scheduler.h"
 #include "imu/imu.h"
 #include "io/motor.h"
+
 /*********** MSP Functions *****************/
 /**
  * generate response for command requestet on msp
@@ -213,7 +214,14 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         }
     }
         break;
+    case MSP_RC: {
+        rx_command_t *rx = &getFcControl()->rx;
 
+        for (int i = 0; i < RX_CHANL_COUNT; i++) {
+            sbufWriteU16(dst, rx->chan[i]);
+        }
+    }
+        break;
     case MSP_MOTOR: {
         motors_command_t *motors = &getFcControl()->motor_command;
         for (unsigned i = 0; i < 4; i++) {
@@ -238,6 +246,7 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
  * @return
  */
 static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
+    const unsigned int dataSize = sbufBytesRemaining(src);
     //const unsigned int dataSize = sbufBytesRemaining(src);
     switch (cmdMSP) {
     case MSP_SET_MOTOR: {
@@ -255,8 +264,17 @@ static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
     case MSP_SET_ARMING_DISABLED:
         //todo
         break;
-    case MSP_SET_RAW_RC:
-        //todo
+    case MSP_SET_RAW_RC: {
+        rx_command_t *rx = &getFcControl()->rx;
+        uint8_t channelCount = dataSize / sizeof(uint16_t);
+//        if (channelCount > RX_CHANL_COUNT) {
+//            return MSP_RESULT_ERROR;
+//        } else {
+        for (int i = 0; i < RX_CHANL_COUNT; i++) {
+            rx->chan[i] = sbufReadU16(src);
+        }
+        //}
+    }
         break;
     default:
         return MSP_RESULT_ERROR;

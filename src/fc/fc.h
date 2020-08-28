@@ -15,12 +15,6 @@ typedef enum {
     THROTTLE,
     AUX1,
     AUX2,
-    AUX3,
-    AUX4,
-    AUX5,
-    AUX6,
-    AUX7,
-    AUX8,
     RX_CHANL_COUNT
 } rc_alias_e;
 
