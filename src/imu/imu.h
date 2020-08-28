@@ -9,7 +9,7 @@ typedef struct {
 
 #define EULER_INITIALIZE  { { 0, 0, 0 } }
 
-typedef union {
+typedef union attitudeEulerAngles_s{
     int16_t raw[3];
     struct {
         // absolute angle inclination in multiple of 0.1 degree    180 deg = 1800

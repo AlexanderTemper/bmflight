@@ -27,22 +27,23 @@ INC_PATH += \
 	src
 # List of C source files.
 CSRCS += \
-	src/main.c	              \
-	src/common/debug.c        \
-	src/common/streambuf.c    \
-	src/common/time.c         \
-	src/common/maths.c        \
-	src/fc/tasks.c            \
-	src/fc/rateController.c   \
-	src/io/serial.c           \
-	src/io/motor.c            \
-	src/msp/msp.c             \
-	src/msp/msp_commands.c    \
-	src/scheduler/scheduler.c \
-	src/fc/fc.c               \
-	src/imu/imu.c             \
-	src/imu/mahonyAHRS.cc     \
-	src/imu/betaflightIMU.c   \
+	src/main.c	                \
+	src/common/debug.c          \
+	src/common/streambuf.c      \
+	src/common/time.c           \
+	src/common/maths.c          \
+	src/fc/tasks.c              \
+	src/fc/rateController.c     \
+	src/fc/attitudeController.c \
+	src/io/serial.c             \
+	src/io/motor.c              \
+	src/msp/msp.c               \
+	src/msp/msp_commands.c      \
+	src/scheduler/scheduler.c   \
+	src/fc/fc.c                 \
+	src/imu/imu.c               \
+	src/imu/mahonyAHRS.cc       \
+	src/imu/betaflightIMU.c     \
 	src/sensor/sensor.c
 
 # Add inlcude paths to preprocessor

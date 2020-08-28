@@ -58,10 +58,13 @@ INC_PATH := \
 CSRCS := \
 	main.c      \
 	uart_serial \
+	joy.c
 	
 	
 CSRCS_FC_SRC := \
+	src/common/time.c \
 	src/common/streambuf.c \
+	src/scheduler/scheduler.c \
 	src/io/serial.c \
 	src/msp/msp.c \
 	src/common/debug.c \

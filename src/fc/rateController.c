@@ -1,6 +1,6 @@
 #include "fc/rateController.h"
 
-#include <stdio.h>
+//#include <stdio.h>
 
 static int16_t P_GAIN = 1;
 //static int16_t lastError[3] = {

@@ -1,14 +1,20 @@
 #include <stdio.h>   /* Standard input/output definitions */
 #include "io/serial.h"
 #include "msp/msp.h"
+#include "common/time.h"
 #include "msp/msp_protocol.h"
 #include "common/debug.h"
 #include "uart_serial.h"
 #include "drivers/SITL/serial_tcp.h"
+#include "joy.h"
+#include "fc/tasks.h"
+#include "scheduler/scheduler.h"
 
+static struct timespec start_time;
 static serialPort_t serialInstance;
 static mspPort_t mspPort;
 static tcpPort_t tcpSerialPort;
+bool uart = false;
 
 #define BUFFER_SIZE 256
 static uint8_t rxBuffer[BUFFER_SIZE];
@@ -118,9 +124,71 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
         break;
     }
 }
+
+static void taskJoy(timeUs_t currentTimeUs) {
+    readJoy();
+    //mspSerialPush(&mspPort, MSP_ATTITUDE, 0, 0, MSP_DIRECTION_REQUEST);
+}
+
+static void taskHandleSerial(timeUs_t currentTimeUs) {
+    if (uart) {
+        update_read(&serialInstance);
+    }
+    mspProcess(&mspPort);
+}
+
+static task_t tasks[TASK_COUNT] = {
+    [TASK_SERIAL] = {
+        .taskName = "TASK_SERIAL",
+        .taskFunc = taskHandleSerial,
+        .staticPriority = 4,
+        .desiredPeriodUs = TASK_PERIOD_HZ(250), },
+    [TASK_SYSTEM] = {
+        .taskName = "TASK_SYSTEM",
+        .taskFunc = taskJoy,
+        .staticPriority = 1,
+        .desiredPeriodUs = TASK_PERIOD_HZ(100), }, };
+
+/**
+ * get the task with the given taskId or NULL on error
+ * @param taskId
+ * @return
+ */
+task_t *getTask(unsigned taskId) {
+    return &tasks[taskId];
+}
+static int64_t nanos64_real(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (ts.tv_sec * 1e9 + ts.tv_nsec) - (start_time.tv_sec * 1e9 + start_time.tv_nsec);
+}
+static uint64_t micros64_real(void) {
+    return nanos64_real() * 1e-3;
+//    return micros64_real();
+}
+static uint64_t millis64_real(void) {
+    return nanos64_real() * 1e-6;
+}
+static uint32_t sitl_micros(void) {
+    return micros64_real() & 0xFFFFFFFF;
+}
+
+static uint32_t sitl_millis(void) {
+    return millis64_real() & 0xFFFFFFFF;
+}
+
+static void sitl_delayNanoSeconds(timeUs_t nsec) {
+    struct timespec ts;
+    ts.tv_sec = 0;
+    ts.tv_nsec = nsec * 1UL;
+    while (nanosleep(&ts, &ts) == -1 && errno == EINTR) {
+    }
+}
+
 int main(int argc, char *argv[]) {
-    bool uart = false;
     initDebug(&debugStdout);
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
+    initTime(&sitl_millis, &sitl_micros, &sitl_delayNanoSeconds);
 
     if (argc == 3 && !strcmp(argv[1], "uart")) {
         printf("Start Uart Serial\n");
@@ -141,21 +209,20 @@ int main(int argc, char *argv[]) {
     mspPort.mspProcessReplyFnPtr = &mspFcProcessReply;
     mspInit(&mspPort, &serialInstance);
 
-    int inc = 0;
-    while (1) {
-        if (inc == 4000) {
-            //mspSerialPush(&mspPort, MSP_ATTITUDE, 0, 0, MSP_DIRECTION_REQUEST);
-            inc = 0;
-        }
+    int js = initJoy("/dev/input/js0");
 
-        if (uart) {
-            update_read(&serialInstance);
-        }
-
-        mspProcess(&mspPort);
-        sleep(0.05);
-        inc++;
+    if (js == -1) {
+        perror("Could not open joystick");
+        return -1;
     }
+    schedulerInit();
+    setTaskEnabled(TASK_SERIAL, true);
+    while (1) {
+        scheduler();
+        delayNanoSeconds(50);
+    }
+
+    close(js);
     return 0;
 }
 

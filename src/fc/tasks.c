@@ -5,6 +5,7 @@
 #include "platform.h"
 #include "common/debug.h"
 #include "fc/rateController.h"
+#include "fc/attitudeController.h"
 
 //#include <stdio.h> //TODO WEG !!!
 
@@ -65,6 +66,10 @@ static void taskAttitude(timeUs_t currentTimeUs) {
     sensors->gyro.data[Z] = sensors->gyro.raw[Z] * sensors->gyro.scale;
 
     updateEstimatedAttitude(currentTimeUs);
+
+    // attitude controller
+    control_t *fcControl = getFcControl();
+    updateAttitudeController(&fcControl->attitude_command, &attitude, &fcControl->rate_command, currentTimeUs);
 }
 
 static void taskHandleSerial(timeUs_t currentTimeUs) {
