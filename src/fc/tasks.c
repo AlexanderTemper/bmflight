@@ -1,6 +1,7 @@
 #include "fc/tasks.h"
 #include "fc/fc.h"
 #include "io/motor.h"
+#include "io/pin.h"
 #include "imu/imu.h"
 #include "platform.h"
 #include "common/debug.h"
@@ -55,6 +56,10 @@ static void taskDebugSerial(timeUs_t currentTimeUs) {
     }
 }
 
+static void taskLed(timeUs_t currentTimeUs) {
+    setStatusLedLevel(ARM_LED, !getStatusLedLevel(ARM_LED));
+
+}
 static void taskRx(timeUs_t currentTimeUs) {
 
     //Timeout 500ms
@@ -76,47 +81,41 @@ static void taskRx(timeUs_t currentTimeUs) {
     }
 
 }
-
-static void taskAttitude(timeUs_t currentTimeUs) {
-    sensors->acc.readFn(&sensors->acc);
-    //todo filter task
-    sensors->acc.data[X] = sensors->acc.ADCRaw[X] * sensors->acc.scale;
-    sensors->acc.data[Y] = sensors->acc.ADCRaw[Y] * sensors->acc.scale;
-    sensors->acc.data[Z] = sensors->acc.ADCRaw[Z] * sensors->acc.scale;
-    sensors->gyro.data[X] = sensors->gyro.raw[X] * sensors->gyro.scale;
-    sensors->gyro.data[Y] = sensors->gyro.raw[Y] * sensors->gyro.scale;
-    sensors->gyro.data[Z] = sensors->gyro.raw[Z] * sensors->gyro.scale;
-
-    fcControl->attitude_command.axis[ROLL] = fcControl->fc_command.roll;
-    fcControl->attitude_command.axis[PITCH] = fcControl->fc_command.pitch;
-    fcControl->attitude_command.axis[YAW] = fcControl->fc_command.yaw;
-
-    updateEstimatedAttitude(currentTimeUs);
-
-    // attitude controller
-
-    //printf("%d %d,%d,%d  %d\n", fcStatus->ARMED, fcControl->attitude_command.axis[ROLL], fcControl->attitude_command.axis[PITCH], fcControl->attitude_command.axis[YAW], fcControl->fc_command.throttle);
-    updateAttitudeController(fcControl, fcStatus->ARMED, currentTimeUs, &attitude);
-}
-
 static void taskHandleSerial(timeUs_t currentTimeUs) {
     processMSP();
 }
 
 static void taskLoop(timeUs_t currentTimeUs) {
     sensors->gyro.readFn(&sensors->gyro);
-    //todo filter task
-    sensors->gyro.filtered[X] = sensors->gyro.raw[X];
-    sensors->gyro.filtered[Y] = sensors->gyro.raw[Y];
-    sensors->gyro.filtered[Z] = sensors->gyro.raw[Z];
-    //run Pid
-    //control_t* fcControl, bool armed, timeUs_t currentTime, gyroDev_t *gyro
+    updateGyro(currentTimeUs);
+    //update rate controller make sure sensors->gyro.filtered[.] gets the new gyro data
     updateRateController(fcControl, fcStatus->ARMED, &sensors->gyro, currentTimeUs);
 
     //printf("pid motor commands = [%d,%d,%d;%d]", motor_command->value[ROLL], motor_command->value[PITCH], motor_command->value[YAW], motor_command->value[THROTTLE]);
-    // get rc data and pid data and mix it
-
     updateMotors();
+}
+static void taskAttitude(timeUs_t currentTimeUs) {
+    sensors->acc.readFn(&sensors->acc);
+
+    updateACC(currentTimeUs);
+
+    //gyro data
+    float gyroAverage[3];
+    gyroGetAccumulationAverage(gyroAverage);
+    sensors->gyro.data[X] = gyroAverage[X] * sensors->gyro.scale;
+    sensors->gyro.data[Y] = gyroAverage[Y] * sensors->gyro.scale;
+    sensors->gyro.data[Z] = gyroAverage[Z] * sensors->gyro.scale;
+
+    // update attitude make sure data in gyro.data[.] is in degree/s and acc.data[.] is in G
+    updateEstimatedAttitude(currentTimeUs);
+
+    // attitude controller
+    fcControl->attitude_command.axis[ROLL] = fcControl->fc_command.roll;
+    fcControl->attitude_command.axis[PITCH] = fcControl->fc_command.pitch;
+    fcControl->attitude_command.axis[YAW] = fcControl->fc_command.yaw;
+
+    //printf("%d %d,%d,%d  %d\n", fcStatus->ARMED, fcControl->attitude_command.axis[ROLL], fcControl->attitude_command.axis[PITCH], fcControl->attitude_command.axis[YAW], fcControl->fc_command.throttle);
+    updateAttitudeController(fcControl, fcStatus->ARMED, currentTimeUs, &attitude);
 }
 
 static task_t tasks[TASK_COUNT] = {
@@ -140,6 +139,11 @@ static task_t tasks[TASK_COUNT] = {
         .taskFunc = taskRx,
         .staticPriority = 3,
         .desiredPeriodUs = TASK_PERIOD_HZ(100), },
+    [TASK_LED] = {
+        .taskName = "TASK_LED",
+        .taskFunc = taskLed,
+        .staticPriority = 0,
+        .desiredPeriodUs = TASK_PERIOD_HZ(5), },
     [TASK_SERIAL] = {
         .taskName = "TASK_SERIAL",
         .taskFunc = taskHandleSerial,
@@ -173,4 +177,5 @@ void tasksInit(void) {
     setTaskEnabled(TASK_LOOP, true);
     setTaskEnabled(TASK_ATTITUDE, true);
     setTaskEnabled(TASK_RX, true);
+    setTaskEnabled(TASK_LED, true);
 }

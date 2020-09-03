@@ -50,7 +50,7 @@ static void accInit(void) {
     bma_init();
     //Normalizing Factor to 1G at +-8 with +-2^13 = 8192/8 = 1024
     bma2x2_set_range(BMA2x2_RANGE_8G);
-    bma2x2_set_bw(BMA2x2_BW_500HZ);
+    bma2x2_set_bw(BMA2x2_BW_125HZ);
     bma2x2_set_power_mode(BMA2x2_MODE_NORMAL);
     sensors.acc.readFn = bma280Read;
     sensors.acc.scale = 1.0f / 1024.0f;

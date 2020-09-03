@@ -147,6 +147,9 @@ static void taskJoy(timeUs_t currentTimeUs) {
     mspSerialPush(&mspPort, MSP_SET_RAW_RC, &data[0], 12, MSP_DIRECTION_REQUEST);
 }
 
+static void taskSystem(timeUs_t currentTimeUs) {
+
+}
 static void taskHandleSerial(timeUs_t currentTimeUs) {
     if (uart) {
         update_read(&serialInstance);
@@ -160,9 +163,14 @@ static task_t tasks[TASK_COUNT] = {
         .taskFunc = taskHandleSerial,
         .staticPriority = 4,
         .desiredPeriodUs = TASK_PERIOD_HZ(250), },
+    [TASK_RX] = {
+        .taskName = "TASK_RX",
+        .taskFunc = taskJoy,
+        .staticPriority = 1,
+        .desiredPeriodUs = TASK_PERIOD_HZ(100), },
     [TASK_SYSTEM] = {
         .taskName = "TASK_SYSTEM",
-        .taskFunc = taskJoy,
+        .taskFunc = taskSystem,
         .staticPriority = 1,
         .desiredPeriodUs = TASK_PERIOD_HZ(100), }, };
 
@@ -226,13 +234,16 @@ int main(int argc, char *argv[]) {
     mspPort.mspProcessReplyFnPtr = &mspFcProcessReply;
     mspInit(&mspPort, &serialInstance);
 
+    schedulerInit();
+
     int js = initJoy("/dev/input/js0");
 
     if (js == -1) {
-        perror("Could not open joystick");
-        return -1;
+        perror("Joy not connected");
+    } else {
+        setTaskEnabled(TASK_RX, true);
     }
-    schedulerInit();
+
     setTaskEnabled(TASK_SERIAL, true);
     while (1) {
         scheduler();

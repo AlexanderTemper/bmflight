@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "common/maths.h"
+#include "common/debug.h"
 #include "msp/msp_protocol.h"
 #include "msp/msp_commands.h"
 #include "fc/fc.h"
@@ -156,11 +157,10 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         sbufWriteU16(dst, 0);
         break;
     case MSP_DEBUG: {
-        sensors_t *s = getSonsors();
-        sbufWriteU16(dst, s->gyro.raw[X]);
-        sbufWriteU16(dst, s->gyro.raw[Y]);
-        sbufWriteU16(dst, s->gyro.raw[Z]);
-        sbufWriteU16(dst, 0);
+        sbufWriteU16(dst, msp_debug_data.data[0]);
+        sbufWriteU16(dst, msp_debug_data.data[1]);
+        sbufWriteU16(dst, msp_debug_data.data[2]);
+        sbufWriteU16(dst, msp_debug_data.data[3]);
         break;
     }
     case MSP_DATAFLASH_SUMMARY:

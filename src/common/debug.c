@@ -4,6 +4,9 @@
 
 #include "common/debug.h"
 
+
+msp_debug_data_t msp_debug_data;
+
 // local function pointer to debug interface
 static sendDebugFuncPtr debugFuncPtr;
 

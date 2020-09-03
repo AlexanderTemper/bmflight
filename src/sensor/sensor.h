@@ -2,6 +2,7 @@
 
 #include "global.h"
 #include "common/time.h"
+#include "common/maths.h"
 
 struct magDev_s;
 typedef bool (*sensorMagReadFuncPtr)(struct magDev_s *magdev, int16_t *data);
@@ -18,13 +19,22 @@ typedef struct accDev_s {
     float data[3];
 } accDev_t;
 
+typedef struct gyroCalibration_s {
+    float sum[XYZ_AXIS_COUNT];
+    stdev_t var[XYZ_AXIS_COUNT];
+    int32_t cyclesRemaining;
+} gyroCalibration_t;
+
 typedef struct gyroDev_s {
     sensorGyroReadFuncPtr readFn; // read 3 axis data function
-    int16_t raw[3];
-    int16_t filtered[3]; // 1Grad/s == 10
+    int16_t raw[XYZ_AXIS_COUNT];
+    int16_t trimed[XYZ_AXIS_COUNT];
+    int16_t filtered[XYZ_AXIS_COUNT];
     timeUs_t lastReadTime;
     float scale;
-    float data[3];
+    float data[XYZ_AXIS_COUNT];
+    int16_t gyroZero[XYZ_AXIS_COUNT];
+    gyroCalibration_t calibration;
 } gyroDev_t;
 
 typedef struct sensors {
@@ -32,6 +42,10 @@ typedef struct sensors {
     accDev_t acc;
 } sensors_t;
 
-
 void InitSonsors(sensors_t * s);
 sensors_t * getSonsors(void);
+bool isGyroSensorCalibrationComplete(void);
+void updateGyro(timeUs_t currentTimeUs);
+bool gyroGetAccumulationAverage(float *accumulationAverage);
+bool accIsCalibrationComplete(void);
+void updateACC(timeUs_t currentTimeUs);

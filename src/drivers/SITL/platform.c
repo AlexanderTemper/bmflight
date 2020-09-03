@@ -212,7 +212,7 @@ static void motor_write_sim(motors_command_t *motors) {
 
 static void setPin(status_leds_e pinId, bool level) {
     pins[pinId] = level;
-    printf("pin Update [%c][%c][%c]\n", pins[ARM_LED] ? 'X' : ' ', pins[CALIBRATION_LED] ? 'X' : ' ', pins[ERROR_LED] ? 'X' : ' ');
+    printf("pin Update [%c][%c][%c]\r", pins[ARM_LED] ? 'X' : ' ', pins[CALIBRATION_LED] ? 'X' : ' ', pins[ERROR_LED] ? 'X' : ' ');
     fflush(stdout);
 }
 /***************************************************************

@@ -7,9 +7,8 @@
 typedef enum {
     X = 0,
     Y,
-    Z
+    Z,
+    XYZ_AXIS_COUNT
 } axis_e;
-
-
 
 //#include <stdio.h> // Todo weg

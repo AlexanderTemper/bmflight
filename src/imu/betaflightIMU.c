@@ -2,9 +2,10 @@
 
 #include "common/maths.h"
 #include "imu/betaflightIMU.h"
+#include "fc/fc.h"
 #include "imu/imu.h"
-
 #include "sensor/sensor.h"
+#include "common/debug.h"
 // the limit (in degrees/second) beyond which we stop integrating
 // omega_I. At larger spin rates the DCM PI controller can get 'dizzy'
 // which results in false gyro drift. See
@@ -13,17 +14,18 @@
 #define SPIN_RATE_LIMIT 20
 #define ATTITUDE_RESET_QUIET_TIME 250000   // 250ms - gyro quiet period after disarm before attitude reset
 #define ATTITUDE_RESET_GYRO_LIMIT 15       // 15 deg/sec - gyro limit for quiet period
-#define ATTITUDE_RESET_KP_GAIN    25.0     // dcmKpGain value to use during attitude reset
 #define ATTITUDE_RESET_ACTIVE_TIME 500000  // 500ms - Time to wait for attitude to converge at high gain
 
 static float rMat[3][3];
 // quaternion of sensor frame relative to earth frame
-static quaternion q = QUATERNION_INITIALIZE;
+static quaternion q = QUATERNION_INITIALIZE
+;
 
-static quaternionProducts qP = QUATERNION_PRODUCTS_INITIALIZE;
+static quaternionProducts qP = QUATERNION_PRODUCTS_INITIALIZE
+;
 
-uint16_t dcm_kp = 0.25f; // DCM filter proportional gain
-uint16_t dcm_ki = 0.0f;    // DCM filter integral gain
+float dcm_kp = 0.25f; // DCM filter proportional gain
+float dcm_ki = 0.00f;    // DCM filter integral gain
 uint8_t small_angle = 25;
 
 //---------------------------------------------------------------------------------------------------
@@ -39,8 +41,7 @@ static float invSqrt(float x) {
     return y;
 }
 
-static void imuQuaternionComputeProducts(quaternion *quat, quaternionProducts *quatProd)
-{
+static void imuQuaternionComputeProducts(quaternion *quat, quaternionProducts *quatProd) {
     quatProd->ww = quat->w * quat->w;
     quatProd->wx = quat->w * quat->x;
     quatProd->wy = quat->w * quat->y;
@@ -79,11 +80,9 @@ void betaIMUInit(void) {
 }
 
 static void imuMahonyAHRSupdate(float dt, float gx, float gy, float gz,
-                                bool useAcc, float ax, float ay, float az,
-                                bool useMag, float mx, float my, float mz,
-                                const float dcmKpGain)
-{
-    static float integralFBx = 0.0f,  integralFBy = 0.0f, integralFBz = 0.0f;    // integral error terms scaled by Ki
+bool useAcc, float ax, float ay, float az,
+bool useMag, float mx, float my, float mz, const float dcmKpGain) {
+    static float integralFBx = 0.0f, integralFBy = 0.0f, integralFBz = 0.0f;    // integral error terms scaled by Ki
 
     // Calculate general spin rate (rad/s)
     const float spin_rate = sqrtf(sq(gx) + sq(gy) + sq(gz));
@@ -190,76 +189,7 @@ static void imuUpdateEulerAngles(void) {
     if (attitude.values.yaw < 0) {
         attitude.values.yaw += 3600;
     }
-   // printf("att: r: %d, p: %d, y: %d\n", attitude.values.roll, attitude.values.pitch, attitude.values.yaw);
-}
-
-
-
-// Calculate the dcmKpGain to use. When armed, the gain is imuRuntimeConfig.dcm_kp * 1.0 scaling.
-// When disarmed after initial boot, the scaling is set to 10.0 for the first 20 seconds to speed up initial convergence.
-// After disarming we want to quickly reestablish convergence to deal with the attitude estimation being incorrect due to a crash.
-//   - wait for a 250ms period of low gyro activity to ensure the craft is not moving
-//   - use a large dcmKpGain value for 500ms to allow the attitude estimate to quickly converge
-//   - reset the gain back to the standard setting
-static float imuCalcKpGain(timeUs_t currentTimeUs, bool useAcc, float *gyroAverage)
-{
-    return dcm_kp;
-    /*
-    static bool lastArmState = false;
-    static timeUs_t gyroQuietPeriodTimeEnd = 0;
-    static timeUs_t attitudeResetTimeEnd = 0;
-    static bool attitudeResetCompleted = false;
-    float ret;
-    bool attitudeResetActive = false;
-
-    const bool armState = ARMING_FLAG(ARMED);
-
-    if (!armState) {
-        if (lastArmState) {   // Just disarmed; start the gyro quiet period
-            gyroQuietPeriodTimeEnd = currentTimeUs + ATTITUDE_RESET_QUIET_TIME;
-            attitudeResetTimeEnd = 0;
-            attitudeResetCompleted = false;
-        }
-
-        // If gyro activity exceeds the threshold then restart the quiet period.
-        // Also, if the attitude reset has been complete and there is subsequent gyro activity then
-        // start the reset cycle again. This addresses the case where the pilot rights the craft after a crash.
-        if ((attitudeResetTimeEnd > 0) || (gyroQuietPeriodTimeEnd > 0) || attitudeResetCompleted) {
-            if ((fabsf(gyroAverage[X]) > ATTITUDE_RESET_GYRO_LIMIT)
-                || (fabsf(gyroAverage[Y]) > ATTITUDE_RESET_GYRO_LIMIT)
-                || (fabsf(gyroAverage[Z]) > ATTITUDE_RESET_GYRO_LIMIT)
-                || (!useAcc)) {
-
-                gyroQuietPeriodTimeEnd = currentTimeUs + ATTITUDE_RESET_QUIET_TIME;
-                attitudeResetTimeEnd = 0;
-            }
-        }
-        if (attitudeResetTimeEnd > 0) {        // Resetting the attitude estimation
-            if (currentTimeUs >= attitudeResetTimeEnd) {
-                gyroQuietPeriodTimeEnd = 0;
-                attitudeResetTimeEnd = 0;
-                attitudeResetCompleted = true;
-            } else {
-                attitudeResetActive = true;
-            }
-        } else if ((gyroQuietPeriodTimeEnd > 0) && (currentTimeUs >= gyroQuietPeriodTimeEnd)) {
-            // Start the high gain period to bring the estimation into convergence
-            attitudeResetTimeEnd = currentTimeUs + ATTITUDE_RESET_ACTIVE_TIME;
-            gyroQuietPeriodTimeEnd = 0;
-        }
-    }
-    lastArmState = armState;
-
-    if (attitudeResetActive) {
-        ret = ATTITUDE_RESET_KP_GAIN;
-    } else {
-       ret = dcm_kp;
-       if (!armState) {
-          ret = ret * 10.0f; // Scale the kP to generally converge faster when disarmed.
-       }
-    }
-
-    return ret;*/
+    // printf("att: r: %d, p: %d, y: %d\n", attitude.values.roll, attitude.values.pitch, attitude.values.yaw);
 }
 
 void updatebetaIMU(timeUs_t currentTimeUs) {
@@ -267,32 +197,21 @@ void updatebetaIMU(timeUs_t currentTimeUs) {
     const timeDelta_t deltaT = currentTimeUs - previousIMUUpdateTime;
     previousIMUUpdateTime = currentTimeUs;
 
-    if (deltaT <=0 ) {
+    if (deltaT <= 0) {
         // printf("timeDiff 0\n");
         return;
     }
 
-    float gyroAverage[3];
-//        gyroGetAccumulationAverage(gyroAverage);
-//
 //        if (accGetAccumulationAverage(accAverage)) {
 //            useAcc = imuIsAccelerometerHealthy(accAverage);
 //        }
 
     sensors_t *sensors = getSonsors();
 
-    gyroAverage[X] = sensors->gyro.data[X];
-    gyroAverage[Y] = sensors->gyro.data[Y];
-    gyroAverage[Z] = sensors->gyro.data[Z];
-
     //printf("update Mahony %f \n", timeDiff/(float)1000);
-    imuMahonyAHRSupdate(
-            deltaT * 1e-6f,
-            DEGREES_TO_RADIANS(gyroAverage[X]), DEGREES_TO_RADIANS(gyroAverage[Y]), DEGREES_TO_RADIANS(gyroAverage[Z]),
-            true,sensors->acc.data[X], sensors->acc.data[Y], sensors->acc.data[Z],
-            false,0,0,0,
-            imuCalcKpGain(currentTimeUs, true, gyroAverage)
-            );
+    imuMahonyAHRSupdate(deltaT * 1e-6f, DEGREES_TO_RADIANS(sensors->gyro.data[X]), DEGREES_TO_RADIANS(sensors->gyro.data[Y]), DEGREES_TO_RADIANS(sensors->gyro.data[Z]),
+    true, sensors->acc.data[X], sensors->acc.data[Y], sensors->acc.data[Z],
+    false, 0, 0, 0, dcm_kp);
     imuUpdateEulerAngles();
 }
 

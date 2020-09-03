@@ -19,6 +19,7 @@ typedef enum {
     TASK_LOOP,
     TASK_ATTITUDE,
     TASK_RX,
+    TASK_LED,
     /* Count of real tasks */
     TASK_COUNT,
 } taskId_e;
