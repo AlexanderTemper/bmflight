@@ -91,6 +91,7 @@ CSRCS += \
 	$(SAMD_LIB_PATH)/ASF_Support/tc_support.c    \
 	$(SAMD_LIB_PATH)/ASF_Support/usart_support.c \
 	$(SAMD_LIB_PATH)/ASF_Support/motor_support.c \
+	$(SAMD_LIB_PATH)/ASF_Support/pin_support.c   \
 	$(SAMD_LIB_PATH)/drivers/bma2x2_support.c    \
 	$(SAMD_LIB_PATH)/drivers/bma2x2.c            \
 	$(SAMD_LIB_PATH)/drivers/bmg160_support.c    \

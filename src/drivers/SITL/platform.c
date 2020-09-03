@@ -13,6 +13,7 @@
 #include "common/time.h"
 #include "io/serial.h"
 #include "io/motor.h"
+#include "io/pin.h"
 #include "msp/msp_commands.h"
 #include "sensor/sensor.h"
 
@@ -29,6 +30,8 @@ static pthread_mutex_t udpLock;
 static bool workerRunning = true;
 
 static sensors_t sensors;
+
+static uint8_t pins[LEDS_COUNT];
 
 // buffer for serial interface
 #define BUFFER_SIZE 256
@@ -207,6 +210,11 @@ static void motor_write_sim(motors_command_t *motors) {
     udpSend(&pwmLink, &pwmPkt, sizeof(servo_packet));
 }
 
+static void setPin(status_leds_e pinId, bool level) {
+    pins[pinId] = level;
+    printf("pin Update [%c][%c][%c]\n", pins[ARM_LED] ? 'X' : ' ', pins[CALIBRATION_LED] ? 'X' : ' ', pins[ERROR_LED] ? 'X' : ' ');
+    fflush(stdout);
+}
 /***************************************************************
  *
  *             global Functions
@@ -278,6 +286,9 @@ void platform_initialize(void) {
         printf("Create udpWorker error!\n");
         exit(1);
     }
+
+    //init pin driver
+    initStatusLed(&setPin);
 }
 
 void interrupt_enable(void) {

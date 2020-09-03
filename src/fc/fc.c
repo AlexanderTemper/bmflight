@@ -1,5 +1,6 @@
 #include "fc/fc.h"
 #include "imu/imu.h"
+#include "io/pin.h"
 
 config_t fc_config;
 status_t fc_status;
@@ -18,7 +19,9 @@ void initFC(void) {
 
     // init status of fc
     fc_status.ARMED = false;
-
+    setStatusLedLevel(ARM_LED, false);
+    setStatusLedLevel(CALIBRATION_LED, false);
+    setStatusLedLevel(ERROR_LED, false);
     //initialize rx channels
     resetRx();
 }

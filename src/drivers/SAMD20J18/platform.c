@@ -7,6 +7,7 @@
 #include "tc_support.h"
 #include "usart_support.h"
 #include "motor_support.h"
+#include "pin_support.h"
 // common includes
 #include "platform.h"
 #include "fc/fc.h"
@@ -14,6 +15,7 @@
 #include "common/time.h"
 #include "io/serial.h"
 #include "io/motor.h"
+#include "io/pin.h"
 #include "msp/msp.h"
 #include "msp/msp_commands.h"
 #include "sensor/sensor.h"
@@ -123,6 +125,10 @@ void platform_initialize(void) {
     // api init
     motorSetup(&motor_write);
     initTime(&millis_samd20j18, &micros_samd20j18, &bmf055_delayNanoSeconds);
+
+    //init pin driver
+    samd20j18_pins_initialize();
+    initStatusLed(&samd20j18_set_pin);
 }
 
 void interrupt_enable(void) {

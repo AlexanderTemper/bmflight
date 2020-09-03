@@ -37,6 +37,7 @@ CSRCS += \
 	src/fc/attitudeController.c \
 	src/io/serial.c             \
 	src/io/motor.c              \
+	src/io/pin.c                \
 	src/msp/msp.c               \
 	src/msp/msp_commands.c      \
 	src/scheduler/scheduler.c   \
