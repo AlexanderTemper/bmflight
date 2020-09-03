@@ -6,9 +6,9 @@
 
 /**
  * calculate mixer_command based on rate_command
- * @param rateCommand
- * @param gyroDev_t
- * @param mixerCommand
+ * @param fcControl
+ * @param armed
+ * @param gyro
  * @param currentTime
  */
-void updateRateController(rate_command_t *rateCommand, gyroDev_t *gyro, mixer_command_t *mixerCommand, timeUs_t currentTime);
+void updateRateController(control_t* fcControl, bool armed, gyroDev_t *gyro, timeUs_t currentTime);

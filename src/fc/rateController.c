@@ -42,16 +42,18 @@ static int16_t calculatePID(int16_t rateError) {
     return PTerm + ITerm + DTerm;
 }
 
-void updateRateController(rate_command_t *rateCommand, gyroDev_t *gyro, mixer_command_t *mixerCommand, timeUs_t currentTime) {
-
+void updateRateController(control_t* fcControl, bool armed, gyroDev_t *gyro, timeUs_t currentTime) {
+    if (!armed) {
+        //reset I and D term
+    }
     int16_t rateError[3];
-    rateError[ROLL] = rateCommand->axis[ROLL] - gyro->filtered[X] * gyro->scale * 10;
-    rateError[PITCH] = rateCommand->axis[PITCH] - gyro->filtered[Y] * gyro->scale * 10;
-    rateError[YAW] = rateCommand->axis[YAW] - gyro->filtered[Z] * gyro->scale * 10;
+    rateError[ROLL] = fcControl->rate_command.axis[ROLL] - gyro->filtered[X] * gyro->scale * 10;
+    rateError[PITCH] = fcControl->rate_command.axis[PITCH] - gyro->filtered[Y] * gyro->scale * 10;
+    rateError[YAW] = fcControl->rate_command.axis[YAW] - gyro->filtered[Z] * gyro->scale * 10;
 
-    mixerCommand->axis[ROLL] = calculatePID(rateError[ROLL]);
-    mixerCommand->axis[PITCH] = calculatePID(rateError[PITCH]);
-    mixerCommand->axis[YAW] = calculatePID(rateError[YAW]);
+    fcControl->mixer_command.axis[ROLL] = calculatePID(rateError[ROLL]);
+    fcControl->mixer_command.axis[PITCH] = calculatePID(rateError[PITCH]);
+    fcControl->mixer_command.axis[YAW] = calculatePID(rateError[YAW]);
 
     //printf("%d: in[%d,%d,%d] out[%d,%d,%d]\n", currentTime, rateCommand->axis[ROLL], rateCommand->axis[PITCH], rateCommand->axis[YAW], mixerCommand->axis[ROLL], mixerCommand->axis[PITCH], mixerCommand->axis[YAW]);
 }

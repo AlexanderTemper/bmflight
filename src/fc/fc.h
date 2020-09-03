@@ -1,6 +1,7 @@
 #pragma once
 
 #include "global.h"
+#include "common/time.h"
 
 #define FC_VERSION_MAJOR 0
 #define FC_VERSION_MINOR 0
@@ -35,6 +36,7 @@ typedef struct status_s {
 
 typedef struct rx_command_s {
     int16_t chan[RX_CHANL_COUNT];
+    timeUs_t lastReceived;
 } rx_command_t;
 
 typedef struct command_s {
@@ -100,3 +102,4 @@ static inline control_t* getFcControl(void) {
 }
 
 void initFC(void);
+void resetRx(void);

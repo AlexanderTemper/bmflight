@@ -270,9 +270,10 @@ static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
 //        if (channelCount > RX_CHANL_COUNT) {
 //            return MSP_RESULT_ERROR;
 //        } else {
-        for (int i = 0; i < RX_CHANL_COUNT; i++) {
+        for (int i = 0; i < RX_CHANL_COUNT && i < channelCount; i++) {
             rx->chan[i] = sbufReadU16(src);
         }
+        rx->lastReceived = micros();
         //}
     }
         break;
