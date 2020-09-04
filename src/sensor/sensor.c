@@ -1,12 +1,12 @@
 #include "sensor/sensor.h"
 #include "common/debug.h"
+#include "eeprom/eeprom_emulation.h"
+#include "fc/fc.h"
 
 #define ENABLE_AVG_GYRO
 
 #define CALIBRATING_ACC_CYCLES 500
-static uint16_t calibratingA = CALIBRATING_ACC_CYCLES; // take 500 readings for calibration
-static int16_t accelerationTrims[XYZ_AXIS_COUNT];
-
+static uint16_t calibratingA = 0; // take 500 readings for calibration
 #define CALIBRATING_GYRO_CYCLES 1000 //2sec on 500Hz
 static sensors_t *sensors;
 
@@ -38,14 +38,26 @@ static void performAcclerationCalibration(void) {
 
     if (calibratingA == 1) {
         // Calculate average, shift Z down by acc_1G and store values in EEPROM at end of calibration
-        accelerationTrims[X] = (a[X]) / CALIBRATING_ACC_CYCLES;
-        accelerationTrims[Y] = (a[Y]) / CALIBRATING_ACC_CYCLES;
-        accelerationTrims[Z] = (a[Z]) / CALIBRATING_ACC_CYCLES - (1 / sensors->acc.scale);
+        sensors->acc.accZero[X] = (a[X]) / CALIBRATING_ACC_CYCLES;
+        sensors->acc.accZero[Y] = (a[Y]) / CALIBRATING_ACC_CYCLES;
+        sensors->acc.accZero[Z] = (a[Z]) / CALIBRATING_ACC_CYCLES - (1 / sensors->acc.scale);
+        config_t *conf = getFcConfig();
+        conf->ACC_TRIM[X] = sensors->acc.accZero[X];
+        conf->ACC_TRIM[Y] = sensors->acc.accZero[Y];
+        conf->ACC_TRIM[Z] = sensors->acc.accZero[Z];
+        write_EEPROM(conf);
     }
 
     calibratingA--;
 }
 
+/**
+ * start calibration
+ * @return
+ */
+bool accStartCalibration(void) {
+    calibratingA = CALIBRATING_ACC_CYCLES;
+}
 /**
  * is the acc calibration done
  * @return
@@ -60,14 +72,14 @@ bool accIsCalibrationComplete(void) {
  * @param currentTimeUs
  */
 void updateACC(timeUs_t currentTimeUs) {
-    if (!accIsCalibrationComplete()) { //=> todo start the calibration on first arm
+    if (!accIsCalibrationComplete()) {
         performAcclerationCalibration();
         return;
     }
 
-    sensors->acc.data[X] = (sensors->acc.ADCRaw[X] - accelerationTrims[X]) * sensors->acc.scale;
-    sensors->acc.data[Y] = (sensors->acc.ADCRaw[Y] - accelerationTrims[Y]) * sensors->acc.scale;
-    sensors->acc.data[Z] = (sensors->acc.ADCRaw[Z] - accelerationTrims[Z]) * sensors->acc.scale;
+    sensors->acc.data[X] = (sensors->acc.ADCRaw[X] - sensors->acc.accZero[X]) * sensors->acc.scale;
+    sensors->acc.data[Y] = (sensors->acc.ADCRaw[Y] - sensors->acc.accZero[Y]) * sensors->acc.scale;
+    sensors->acc.data[Z] = (sensors->acc.ADCRaw[Z] - sensors->acc.accZero[Z]) * sensors->acc.scale;
 }
 
 typedef struct gyroAvarage_s {
@@ -115,7 +127,6 @@ bool isGyroSensorCalibrationComplete(void) {
     return sensors->gyro.calibration.cyclesRemaining == 0;
 }
 
-
 /**
  * update the gyro data with new raw data
  * first an calibration is done
@@ -138,7 +149,6 @@ void updateGyro(timeUs_t currentTimeUs) {
     sensors->gyro.filtered[X] = sensors->gyro.trimed[X];
     sensors->gyro.filtered[Y] = sensors->gyro.trimed[Y];
     sensors->gyro.filtered[Z] = sensors->gyro.trimed[Z];
-
 
 #ifdef ENABLE_AVG_GYRO
     const timeDelta_t sampleDeltaUs = currentTimeUs - gyroAvarage.accumulationLastTimeSampledUs;

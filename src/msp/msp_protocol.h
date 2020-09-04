@@ -26,6 +26,7 @@
 #define MSP_STATUS_EX             150    //out message         cycletime, errors_count, CPU load, sensor present etc
 #define MSP_UID                   160
 #define MSP_SET_RAW_RC            200
+#define MSP_ACC_CALIBRATION       205
 #define MSP_SET_MOTOR             214    //in message          PropBalance function
 #define MSP_ACC_TRIM              240    //out message         get acc angle trim values
 #define MSP_SET_RTC               246    //in message          Sets the RTC clock

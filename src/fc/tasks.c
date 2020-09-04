@@ -57,8 +57,10 @@ static void taskDebugSerial(timeUs_t currentTimeUs) {
 }
 
 static void taskLed(timeUs_t currentTimeUs) {
-    setStatusLedLevel(ARM_LED, !getStatusLedLevel(ARM_LED));
 
+    setStatusLedLevel(CALIBRATION_LED, isGyroSensorCalibrationComplete() && accIsCalibrationComplete());
+
+    setStatusLedLevel(ARM_LED, !getStatusLedLevel(ARM_LED));
 }
 static void taskRx(timeUs_t currentTimeUs) {
 

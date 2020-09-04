@@ -4,7 +4,7 @@ APP_NAME = BMF055FlightController
 
 EXE_FILE = bin/$(APP_NAME).out
 
-TARGET = BMF055
+TARGET = SITL
 BUILD_DIR := build/
 
 # Choose target MCU
@@ -27,24 +27,25 @@ INC_PATH += \
 	src
 # List of C source files.
 CSRCS += \
-	src/main.c	                \
-	src/common/debug.c          \
-	src/common/streambuf.c      \
-	src/common/time.c           \
-	src/common/maths.c          \
-	src/fc/tasks.c              \
-	src/fc/rateController.c     \
-	src/fc/attitudeController.c \
-	src/io/serial.c             \
-	src/io/motor.c              \
-	src/io/pin.c                \
-	src/msp/msp.c               \
-	src/msp/msp_commands.c      \
-	src/scheduler/scheduler.c   \
-	src/fc/fc.c                 \
-	src/imu/imu.c               \
-	src/imu/mahonyAHRS.cc       \
-	src/imu/betaflightIMU.c     \
+	src/main.c	                  \
+	src/common/debug.c            \
+	src/common/streambuf.c        \
+	src/common/time.c             \
+	src/common/maths.c            \
+	src/eeprom/eeprom_emulation.c \
+	src/fc/tasks.c                \
+	src/fc/rateController.c       \
+	src/fc/attitudeController.c   \
+	src/io/serial.c               \
+	src/io/motor.c                \
+	src/io/pin.c                  \
+	src/msp/msp.c                 \
+	src/msp/msp_commands.c        \
+	src/scheduler/scheduler.c     \
+	src/fc/fc.c                   \
+	src/imu/imu.c                 \
+	src/imu/mahonyAHRS.cc         \
+	src/imu/betaflightIMU.c       \
 	src/sensor/sensor.c
 
 # Add inlcude paths to preprocessor

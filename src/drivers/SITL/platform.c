@@ -16,6 +16,7 @@
 #include "io/pin.h"
 #include "msp/msp_commands.h"
 #include "sensor/sensor.h"
+#include "eeprom/eeprom_emulation.h"
 
 // Variables
 static serialPort_t serialInstance;
@@ -63,6 +64,43 @@ static servo_packet pwmPkt;
  *              local Functions
  *
  ***************************************************************/
+
+#define EEPROM_FILENAME "EEPROM_SITL.bin"
+
+static void sitl_read_EEPROM(config_t* config) {
+    FILE *eepromFd;
+    eepromFd = fopen(EEPROM_FILENAME, "r");
+    if (eepromFd == NULL) {
+        printf("[FLASH] no flash File found\n");
+        return;
+    }
+    fseek(eepromFd, 0, SEEK_END);
+    size_t lSize = ftell(eepromFd);
+    rewind(eepromFd);
+    size_t n = fread(config, sizeof(config_t), 1, eepromFd);
+    if (n == 1) {
+        printf("[FLASH] loaded '%s', size = %ld / %ld\n", EEPROM_FILENAME, lSize, sizeof(config_t));
+    } else {
+        printf("[FLASH] loaded faild '%s', size = %ld / %ld\n", EEPROM_FILENAME, lSize, sizeof(config_t));
+    }
+    fclose(eepromFd);
+}
+
+static void sitl_write_EEPROM(config_t* config) {
+    FILE *eepromFd;
+    eepromFd = fopen(EEPROM_FILENAME, "w+");
+    if (eepromFd == NULL) {
+        fprintf(stderr, "[FLASH] failed to create '%s'\n", EEPROM_FILENAME);
+        return;
+    }
+    if (fwrite(config, sizeof(config_t), 1, eepromFd) != 1) {
+        fprintf(stderr, "[FLASH] write failed: %s\n", strerror(errno));
+        return;
+    }
+    fclose(eepromFd);
+    printf("[FLASH] write config version %d  '%s', size =  %ld\n", config->CONFIG_VERSION, EEPROM_FILENAME, sizeof(config_t));
+    sitl_read_EEPROM(config);
+}
 
 //static void debugSerial(const uint8_t* data, uint16_t len) {
 //    serialWriteBuf(&serialInstance, data, len);
@@ -254,6 +292,7 @@ void platform_initialize(void) {
     clock_gettime(CLOCK_MONOTONIC, &start_time);
     SystemCoreClock = 500 * 1e6; // fake 500MHz
 
+    init_EEPROM(&sitl_read_EEPROM, &sitl_write_EEPROM);
     motorSetup(&motor_write_sim);
     printf("[system]Init...\n");
 

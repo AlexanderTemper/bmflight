@@ -115,6 +115,12 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         break;
     case MSP_BOXNAMES:
         break;
+
+    case MSP_ACC_TRIM:
+        sbufWriteU16(dst, getFcConfig()->ACC_TRIM[PITCH]);
+        sbufWriteU16(dst, getFcConfig()->ACC_TRIM[ROLL]);
+        sbufWriteU16(dst, getFcConfig()->ACC_TRIM[YAW]);
+        break;
     case MSP_FC_VARIANT:
         sbufWriteString(dst, FC_VARIANT);
         break;
@@ -189,10 +195,6 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         }
         break;
     }
-    case MSP_ACC_TRIM: //TODO
-        sbufWriteU16(dst, 0);
-        sbufWriteU16(dst, 0);
-        break;
     case MSP_MOTOR_CONFIG: {
         config_t* config = getFcConfig();
         sbufWriteU16(dst, config->MINTHROTTLE);
@@ -249,6 +251,11 @@ static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
     const unsigned int dataSize = sbufBytesRemaining(src);
     //const unsigned int dataSize = sbufBytesRemaining(src);
     switch (cmdMSP) {
+    case MSP_ACC_CALIBRATION:
+        if (!getFcStatus()->ARMED) {
+            accStartCalibration();
+        }
+        break;
     case MSP_SET_MOTOR: {
         motors_command_t motors;
         for (int i = 0; i < 4; i++) {

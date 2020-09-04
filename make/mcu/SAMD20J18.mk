@@ -49,6 +49,7 @@ ASF_CSRCS = \
 	$(ASF_PATH)/common/utils/interrupt/interrupt_sam_nvic.c        \
 	$(ASF_PATH)/common2/boards/user_board/init.c                   \
 	$(ASF_PATH)/sam0/drivers/port/port.c                           \
+	$(ASF_PATH)/sam0/drivers/nvm/nvm.c                             \
 	$(ASF_PATH)/sam0/drivers/sercom/sercom.c                       \
 	$(ASF_PATH)/sam0/drivers/sercom/sercom_interrupt.c             \
 	$(ASF_PATH)/sam0/drivers/sercom/spi/spi.c                      \
@@ -84,19 +85,20 @@ INC_PATH += \
 
 # List of C source files.
 CSRCS += \
-	$(ASF_CSRCS)                                 \
-	$(SAMD_LIB_PATH)/ASF_Support/clock_support.c \
-	$(SAMD_LIB_PATH)/ASF_Support/spi_support.c   \
-	$(SAMD_LIB_PATH)/ASF_Support/i2c_support.c   \
-	$(SAMD_LIB_PATH)/ASF_Support/tc_support.c    \
-	$(SAMD_LIB_PATH)/ASF_Support/usart_support.c \
-	$(SAMD_LIB_PATH)/ASF_Support/motor_support.c \
-	$(SAMD_LIB_PATH)/ASF_Support/pin_support.c   \
-	$(SAMD_LIB_PATH)/drivers/bma2x2_support.c    \
-	$(SAMD_LIB_PATH)/drivers/bma2x2.c            \
-	$(SAMD_LIB_PATH)/drivers/bmg160_support.c    \
-	$(SAMD_LIB_PATH)/drivers/bmg160.c            \
-	$(SAMD_LIB_PATH)/drivers/bmm050_support.c    \
+	$(ASF_CSRCS)                                           \
+	$(SAMD_LIB_PATH)/ASF_Support/clock_support.c           \
+	$(SAMD_LIB_PATH)/ASF_Support/spi_support.c             \
+	$(SAMD_LIB_PATH)/ASF_Support/i2c_support.c             \
+	$(SAMD_LIB_PATH)/ASF_Support/tc_support.c              \
+	$(SAMD_LIB_PATH)/ASF_Support/usart_support.c           \
+	$(SAMD_LIB_PATH)/ASF_Support/eeprom_emulator_support.c \
+	$(SAMD_LIB_PATH)/ASF_Support/motor_support.c           \
+	$(SAMD_LIB_PATH)/ASF_Support/pin_support.c             \
+	$(SAMD_LIB_PATH)/drivers/bma2x2_support.c              \
+	$(SAMD_LIB_PATH)/drivers/bma2x2.c                      \
+	$(SAMD_LIB_PATH)/drivers/bmg160_support.c              \
+	$(SAMD_LIB_PATH)/drivers/bmg160.c                      \
+	$(SAMD_LIB_PATH)/drivers/bmm050_support.c              \
 	$(SAMD_LIB_PATH)/drivers/bmm050.c
 	
 	

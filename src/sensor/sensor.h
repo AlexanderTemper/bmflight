@@ -13,10 +13,14 @@ typedef bool (*sensorGyroReadFuncPtr)(struct gyroDev_s *gyro);
 
 typedef struct accDev_s {
     sensorAccReadFuncPtr readFn; // read 3 axis data function
-    int16_t ADCRaw[3];
-    timeUs_t lastReadTime;
+
+    int16_t ADCRaw[XYZ_AXIS_COUNT];
+    float data[XYZ_AXIS_COUNT];
+
     float scale;
-    float data[3];
+    int16_t accZero[XYZ_AXIS_COUNT];
+    timeUs_t lastReadTime;
+
 } accDev_t;
 
 typedef struct gyroCalibration_s {
@@ -47,5 +51,6 @@ sensors_t * getSonsors(void);
 bool isGyroSensorCalibrationComplete(void);
 void updateGyro(timeUs_t currentTimeUs);
 bool gyroGetAccumulationAverage(float *accumulationAverage);
+bool accStartCalibration(void);
 bool accIsCalibrationComplete(void);
 void updateACC(timeUs_t currentTimeUs);

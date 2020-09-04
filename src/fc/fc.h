@@ -19,7 +19,12 @@ typedef enum {
     RX_CHANL_COUNT
 } rc_alias_e;
 
+
+#define EEPROM_CONF_VERSION 1 //make sure to change if struct changes
+
 typedef struct config_s {
+    uint16_t CONFIG_VERSION;
+
     int16_t MINTHROTTLE;
     int16_t MAXTHROTTLE;
     int16_t MINCOMMAND;
@@ -27,6 +32,8 @@ typedef struct config_s {
     int16_t MINCHECK;
     int16_t MAXCHECK;
     uint8_t YAW_DIRECTION;
+
+    int16_t ACC_TRIM[XYZ_AXIS_COUNT];
     bool motorOneShot;
 } config_t;
 

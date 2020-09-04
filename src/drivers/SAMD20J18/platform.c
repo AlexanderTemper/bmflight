@@ -7,6 +7,7 @@
 #include "tc_support.h"
 #include "usart_support.h"
 #include "motor_support.h"
+#include "eeprom_emulator_support.h"
 #include "pin_support.h"
 // common includes
 #include "platform.h"
@@ -70,7 +71,7 @@ static bool bmg160Read(gyroDev_t *gyro) {
 }
 static void gyroInit(void) {
     bmg_init();
-    bmg160_set_range_reg(0x00);
+    bmg160_set_range_reg(0x00); //2000Grad/s
     bmg160_set_bw(C_BMG160_BW_116HZ_U8X);
     bmg160_set_power_mode(BMG160_MODE_NORMAL);
     sensors.gyro.readFn = bmg160Read;
@@ -121,6 +122,12 @@ void platform_initialize(void) {
     system_init();
     clock_initialize();
     tc_initialize();
+
+    //inict config
+    eeprom_emulator_initialize();
+    init_EEPROM(&samd20j18_read_EEPROM, &samd20j18_write_EEPROM);
+
+
     motor_initialize();
     // api init
     motorSetup(&motor_write);
