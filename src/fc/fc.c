@@ -10,7 +10,7 @@ config_t fc_config;
 status_t fc_status;
 control_t fc_control;
 
-config_t default_fc_config = {
+static config_t default_fc_config = {
     .MINTHROTTLE = 1020,
     .MAXTHROTTLE = 2000,
     .MINCOMMAND = 1000,
@@ -20,23 +20,26 @@ config_t default_fc_config = {
     .YAW_DIRECTION = 1,
     .motorOneShot = true,
     .ACC_TRIM = {
-        0,
-        0,
-        0 },
+        -38,
+        -19,
+        42 },
     .CONFIG_VERSION = EEPROM_CONF_VERSION, };
 
 void initFC(void) {
 
-    config_t loaded_config;
-    loaded_config.CONFIG_VERSION = 0;
-    read_EEPROM(&loaded_config);
+    config_t init_config;
+    init_config.CONFIG_VERSION = 0;
+
+    config_t *loaded_config = &init_config;
+    read_EEPROM(loaded_config);
 
     // write default config to eeprom (no config was found or config layout has changed)
-    if (loaded_config.CONFIG_VERSION != EEPROM_CONF_VERSION) {
-        write_EEPROM(&default_fc_config);
+    if (loaded_config->CONFIG_VERSION != EEPROM_CONF_VERSION) {
+        write_EEPROM(&default_fc_config); //write default
+        loaded_config = &default_fc_config;
     }
     // copy loaded config to active config
-    memcpy(&loaded_config, &fc_config, sizeof(config_t));
+    memcpy(&fc_config, loaded_config, sizeof(config_t));
     // init status of fc
     fc_status.ARMED = false;
     setStatusLedLevel(ARM_LED, false);

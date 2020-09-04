@@ -20,6 +20,7 @@
 #include "msp/msp.h"
 #include "msp/msp_commands.h"
 #include "sensor/sensor.h"
+#include "eeprom/eeprom_emulation.h"
 
 // Variables
 static serialPort_t serialInstance;

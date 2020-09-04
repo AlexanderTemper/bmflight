@@ -51,6 +51,6 @@ sensors_t * getSonsors(void);
 bool isGyroSensorCalibrationComplete(void);
 void updateGyro(timeUs_t currentTimeUs);
 bool gyroGetAccumulationAverage(float *accumulationAverage);
-bool accStartCalibration(void);
+void accStartCalibration(void);
 bool accIsCalibrationComplete(void);
 void updateACC(timeUs_t currentTimeUs);

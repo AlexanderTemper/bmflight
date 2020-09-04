@@ -55,7 +55,7 @@ static void performAcclerationCalibration(void) {
  * start calibration
  * @return
  */
-bool accStartCalibration(void) {
+void accStartCalibration(void) {
     calibratingA = CALIBRATING_ACC_CYCLES;
 }
 /**
