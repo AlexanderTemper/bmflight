@@ -115,6 +115,8 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
         printf("\n get AccData [%d %d %d], GyroData [%d %d %d]", acc[X], acc[Y], acc[Z], gyro[X], gyro[Y], gyro[Z]);
         break;
     }
+    case MSP_SET_RAW_RC:
+        break;
     case MSP_DEBUGMSG: {
         fwrite(src->ptr, 1, sbufBytesRemaining(src), stdout);
         //printf(" , ");
@@ -128,7 +130,6 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
 
 static void taskJoy(timeUs_t currentTimeUs) {
     readJoy();
-
 //        for (int i = 0; i < RX_CHANL_COUNT; i++) {
 //            sbufWriteU16(dst, rx->chan[i]);
 //        }

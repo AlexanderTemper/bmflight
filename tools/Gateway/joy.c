@@ -31,7 +31,7 @@ int initJoy(const char* name) {
     rx_joy.pitch = 1500;
     rx_joy.yaw = 1500;
     rx_joy.throttle = 1000;
-    joyDev = open(name, O_RDONLY);
+    joyDev = open(name, O_RDONLY|O_NONBLOCK);
     return joyDev;
 }
 
@@ -52,7 +52,7 @@ void readJoy(void) {
             rx_joy.yaw = (((float)event.value/32767)*500)+1500;
             break;
         case 1:
-            rx_joy.throttle = ((float)-event.value/32767)*1000+1000;
+            rx_joy.throttle = ((((float)-event.value/32767)+1)/2)*1000+1000;
             break;
         case 3:
             rx_joy.roll = (((float)event.value/32767)*500)+1500;

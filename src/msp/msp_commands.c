@@ -10,6 +10,7 @@
 #include "scheduler/scheduler.h"
 #include "imu/imu.h"
 #include "io/motor.h"
+#include "eeprom/eeprom_emulation.h"
 
 /*********** MSP Functions *****************/
 /**
@@ -108,6 +109,26 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         sbufWriteU32(dst, 0);               //armingDisableFlags);
     }
         break;
+    case MSP_ADVANCED_CONFIG:
+        sbufWriteU8(dst, 16);  // was gyroConfig()->gyro_sync_denom - removed in API 1.43
+        sbufWriteU8(dst, 1);  //pidConfig()->pid_process_denom);
+        sbufWriteU8(dst, 0);  //motorConfig()->dev.useUnsyncedPwm);
+        sbufWriteU8(dst, getFcConfig()->motorOneShot);
+        sbufWriteU16(dst, 0); // motorConfig()->dev.motorPwmRate);
+        sbufWriteU16(dst, 0); //  motorConfig()->digitalIdleOffsetValue);
+        sbufWriteU8(dst, 0); // DEPRECATED: gyro_use_32kHz
+        sbufWriteU8(dst, 0); //  motorConfig()->dev.motorPwmInversion);
+        sbufWriteU8(dst, 0); // gyroConfig()->gyro_to_use);
+        sbufWriteU8(dst, 0); //  gyroConfig()->gyro_high_fsr);
+        sbufWriteU8(dst, 0); //  gyroConfig()->gyroMovementCalibrationThreshold);
+        sbufWriteU16(dst, 0); // gyroConfig()->gyroCalibrationDuration);
+        sbufWriteU16(dst, 0); //  gyroConfig()->gyro_offset_yaw);
+        sbufWriteU8(dst, 0); //  gyroConfig()->checkOverflow);
+        //Added in MSP API 1.42
+        sbufWriteU8(dst, 0); // systemConfig()->debug_mode);
+        sbufWriteU8(dst, 4);
+
+        break;
     case MSP_API_VERSION:
         sbufWriteU8(dst, MSP_PROTOCOL_VERSION);
         sbufWriteU8(dst, API_VERSION_MAJOR);
@@ -115,7 +136,6 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         break;
     case MSP_BOXNAMES:
         break;
-
     case MSP_ACC_TRIM:
         sbufWriteU16(dst, getFcConfig()->ACC_TRIM[PITCH]);
         sbufWriteU16(dst, getFcConfig()->ACC_TRIM[ROLL]);
@@ -129,7 +149,82 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         sbufWriteU8(dst, FC_VERSION_MINOR);
         sbufWriteU8(dst, FC_VERSION_PATCH_LEVEL);
         break;
+    case MSP_CF_SERIAL_CONFIG: {
+        sbufWriteU8(dst, 0); //id
+//        enum {
+//            MSP = 0,
+//            GPS = 1,
+//            TELEMETRY_FRSKY = 2,
+//            TELEMETRY_HOTT = 3,
+//            TELEMETRY_MSP = 4,
+//            TELEMETRY_LTM = 4, // LTM replaced MSP
+//            TELEMETRY_SMARTPORT = 5,
+//            RX_SERIAL = 6,
+//            BLACKBOX = 7,
+//            TELEMETRY_MAVLINK = 9,
+//            ESC_SENSOR = 10,
+//            TBS_SMARTAUDIO = 11,
+//            TELEMETRY_IBUS = 12,
+//            IRC_TRAMP = 13,
+//            RUNCAM_DEVICE_CONTROL = 14, // support communitate with RunCam Device
+//            LIDAR_TF = 15,
+//            FRSKY_OSD = 16
+//        };
+        uint16_t mask = 0;
+        sbufWriteU16(dst, mask | 0b000000001000001);
+        sbufWriteU8(dst, 5);
+        sbufWriteU8(dst, 5);
+        sbufWriteU8(dst, 5);
+        sbufWriteU8(dst, 5);
+    }
+        break;
+    case MSP_BOARD_ALIGNMENT_CONFIG: {
+        sbufWriteU16(dst, 0);
+        sbufWriteU16(dst, 0);
+        sbufWriteU16(dst, 0);
+    }
+        break;
 
+    case MSP_RX_MAP: {
+        for (int i = 0; i < RX_CHANL_COUNT; i++) {
+            sbufWriteU8(dst, i);
+        }
+    }
+        break;
+    case MSP_RSSI_CONFIG: {
+        sbufWriteU8(dst, 0);
+    }
+        break;
+    case MSP_ARMING_CONFIG:
+        sbufWriteU8(dst, getFcConfig()->ARM_TIMEOUT_US / 100000); //0,1Sec
+        sbufWriteU8(dst, 0);
+        sbufWriteU8(dst, getFcConfig()->MAX_ARMING_ANGLE);
+        break;
+    case MSP_RX_CONFIG:
+        sbufWriteU8(dst, 0);
+        sbufWriteU16(dst, getFcConfig()->MAXCHECK);
+        sbufWriteU16(dst, getFcConfig()->MIDRC);
+        sbufWriteU16(dst, getFcConfig()->MINCHECK);
+        sbufWriteU8(dst, 0); //rxConfig()->spektrum_sat_bind);
+        sbufWriteU16(dst, 0); //rxConfig()->rx_min_usec);
+        sbufWriteU16(dst, 0); // rxConfig()->rx_max_usec);
+        sbufWriteU8(dst, 0); // rxConfig()->rcInterpolation);
+        sbufWriteU8(dst, 0); // rxConfig()->rcInterpolationInterval);
+        sbufWriteU16(dst, 1000); //        sbufWriteU16(dst, rxConfig()->airModeActivateThreshold * 10 + 1000);
+        break;
+    case MSP_FAILSAFE_CONFIG:
+        sbufWriteU8(dst, getFcConfig()->ARM_TIMEOUT_US / 100000);
+        sbufWriteU8(dst, getFcConfig()->ARM_TIMEOUT_US / 100000);
+        sbufWriteU16(dst, 0);
+        sbufWriteU8(dst, 0);
+        sbufWriteU16(dst, 0);
+        sbufWriteU8(dst, 1);
+        break;
+    case MSP_REBOOT: {
+        sbufWriteU8(dst, 0); //MSP_REBOOT_FIRMWARE
+        rebootFC();
+    }
+        break;
     case MSP_BOARD_INFO: { //TODO check info
         sbufWriteData(dst, BOARD_IDENTIFIER, 4);
         sbufWriteU16(dst, 0); // No other build targets currently have hardware revision detection
@@ -209,10 +304,9 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         break;
     }
     case MSP_NAME: {
-        const char pilotname[] = "AlexBETA";
-        const int nameLen = strlen(pilotname);
+        const int nameLen = strlen(getFcConfig()->PILOTNAME);
         for (int i = 0; i < nameLen; i++) {
-            sbufWriteU8(dst, pilotname[i]);
+            sbufWriteU8(dst, getFcConfig()->PILOTNAME[i]);
         }
     }
         break;
@@ -249,7 +343,7 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
  */
 static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
     const unsigned int dataSize = sbufBytesRemaining(src);
-    //const unsigned int dataSize = sbufBytesRemaining(src);
+//const unsigned int dataSize = sbufBytesRemaining(src);
     switch (cmdMSP) {
     case MSP_ACC_CALIBRATION:
         if (!getFcStatus()->ARMED) {
@@ -265,11 +359,38 @@ static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
         testMotor(&motors);
     }
         break;
+    case MSP_SET_MOTOR_CONFIG: {
+        getFcConfig()->MINTHROTTLE = sbufReadU16(src);
+        getFcConfig()->MAXTHROTTLE = sbufReadU16(src);
+        getFcConfig()->MINCOMMAND = sbufReadU16(src);
+    }
+        break;
     case MSP_SET_RTC:
         //todo
         break;
     case MSP_SET_ARMING_DISABLED:
         //todo
+        break;
+    case MSP_SET_NAME:
+        memset(getFcConfig()->PILOTNAME, 0, 16);
+        for (unsigned int i = 0; i < MIN((const unsigned int)15, dataSize); i++) {
+            getFcConfig()->PILOTNAME[i] = sbufReadU8(src);
+        }
+        break;
+    case MSP_SET_ARMING_CONFIG:
+        sbufReadU8(src); //getFcConfig()->ARM_TIMEOUT_US = sbufReadU8(src) * 100000; //set via fail save
+        sbufReadU8(src);
+        getFcConfig()->MAX_ARMING_ANGLE = sbufReadU8(src);
+        break;
+    case MSP_SET_ACC_TRIM:
+        getFcConfig()->ACC_TRIM[PITCH] = sbufReadU16(src);
+        getFcConfig()->ACC_TRIM[ROLL] = sbufReadU16(src);
+        break;
+    case MSP_EEPROM_WRITE:
+        write_EEPROM(getFcConfig());
+        break;
+    case MSP_SET_FAILSAFE_CONFIG:
+        getFcConfig()->ARM_TIMEOUT_US = sbufReadU8(src) * 100000;
         break;
     case MSP_SET_RAW_RC: {
         rx_command_t *rx = &getFcControl()->rx;
@@ -301,7 +422,7 @@ mspResult_e mspFcProcessCommand(mspPacket_t *cmd, mspPacket_t *reply) {
     sbuf_t *dst = &reply->buf;
     sbuf_t *src = &cmd->buf;
     const uint8_t cmdMSP = cmd->cmd;
-    // initialize reply by default
+// initialize reply by default
     reply->cmd = cmd->cmd;
 
     if (mspProcessOutCommand(cmdMSP, dst)) {
@@ -313,5 +434,5 @@ mspResult_e mspFcProcessCommand(mspPacket_t *cmd, mspPacket_t *reply) {
     return ret;
 }
 void mspFcProcessReply(mspPacket_t *cmd) {
-    //no Master so nothing to do here
+//no Master so nothing to do here
 }

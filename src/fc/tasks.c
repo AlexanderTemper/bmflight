@@ -11,6 +11,7 @@
 static control_t *fcControl;
 static status_t *fcStatus;
 static sensors_t *sensors;
+static config_t *fcConfig;
 
 static void debugTask(taskId_e id) {
     taskInfo_t taskInfo;
@@ -62,18 +63,21 @@ static void taskLed(timeUs_t currentTimeUs) {
 
     setStatusLedLevel(ARM_LED, !getStatusLedLevel(ARM_LED));
 }
+
 static void taskRx(timeUs_t currentTimeUs) {
 
     //Timeout 500ms
-    if (cmpTimeUs(currentTimeUs, fcControl->rx.lastReceived) > 500000) {
+    if (cmpTimeUs(currentTimeUs, fcControl->rx.lastReceived) > fcConfig->ARM_TIMEOUT_US) {
         fcStatus->ARMED = false;
         resetRx();
+        setStatusLedLevel(ERROR_LED, true);
         return;
     }
+    setStatusLedLevel(ERROR_LED, false);
 
-    fcControl->fc_command.roll = fcControl->rx.chan[ROLL] - 1500;
-    fcControl->fc_command.pitch = fcControl->rx.chan[PITCH] - 1500;
-    fcControl->fc_command.yaw = fcControl->rx.chan[YAW] - 1500;
+    fcControl->fc_command.roll = fcControl->rx.chan[ROLL] - fcConfig->MIDRC;
+    fcControl->fc_command.pitch = fcControl->rx.chan[PITCH] - fcConfig->MIDRC;
+    fcControl->fc_command.yaw = fcControl->rx.chan[YAW] - fcConfig->MIDRC;
     fcControl->fc_command.throttle = fcControl->rx.chan[THROTTLE];
 
     if (fcControl->rx.chan[AUX1] > 1600) {
@@ -171,7 +175,7 @@ void tasksInit(void) {
     fcControl = getFcControl();
     fcStatus = getFcStatus();
     sensors = getSonsors();
-
+    fcConfig = getFcConfig();
     schedulerInit();
     //enebale tasks
     //setTaskEnabled(TASK_DEBUG, true);

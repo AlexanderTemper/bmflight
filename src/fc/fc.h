@@ -20,10 +20,12 @@ typedef enum {
 } rc_alias_e;
 
 
-#define EEPROM_CONF_VERSION 1 //make sure to change if struct changes
+#define EEPROM_CONF_VERSION 3 //make sure to change if struct changes
 
 typedef struct config_s {
     uint16_t CONFIG_VERSION;
+
+    char PILOTNAME[16];
 
     int16_t MINTHROTTLE;
     int16_t MAXTHROTTLE;
@@ -34,6 +36,9 @@ typedef struct config_s {
     uint8_t YAW_DIRECTION;
 
     int16_t ACC_TRIM[XYZ_AXIS_COUNT];
+
+    uint32_t ARM_TIMEOUT_US;
+    uint8_t MAX_ARMING_ANGLE;
     bool motorOneShot;
 } config_t;
 
@@ -109,4 +114,5 @@ static inline control_t* getFcControl(void) {
 }
 
 void initFC(void);
+void rebootFC(void);
 void resetRx(void);

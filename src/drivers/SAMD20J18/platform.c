@@ -77,7 +77,7 @@ static void gyroInit(void) {
     bmg160_set_power_mode(BMG160_MODE_NORMAL);
     sensors.gyro.readFn = bmg160Read;
     // 16.4 dps/lsb scalefactor
-    sensors.gyro.scale = 1.0f / 16.3835f;
+    sensors.gyro.scale = 1.0f / 16.4f;
 }
 inline static void bmf055_delayNanoSeconds(timeUs_t nsec) {
 

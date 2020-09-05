@@ -2,9 +2,9 @@
 #include "imu/imu.h"
 #include "io/pin.h"
 #include "sensor/sensor.h"
-#include <string.h>
-
 #include "eeprom/eeprom_emulation.h"
+#include "fc/tasks.h"
+#include <string.h>
 
 config_t fc_config;
 status_t fc_status;
@@ -19,11 +19,30 @@ static config_t default_fc_config = {
     .MAXCHECK = 1900,
     .YAW_DIRECTION = 1,
     .motorOneShot = true,
+    .ARM_TIMEOUT_US = 500000,
+    .MAX_ARMING_ANGLE = 25,
     .ACC_TRIM = {
         -38,
         -19,
         42 },
-    .CONFIG_VERSION = EEPROM_CONF_VERSION, };
+    .CONFIG_VERSION = EEPROM_CONF_VERSION,
+    .PILOTNAME = {
+        'T',
+        'e',
+        'm',
+        'p',
+        'e',
+        'r',
+        'A',
+        't',
+        'u',
+        'r',
+        0,
+        0,
+        0,
+        0,
+        0,
+        0 }, };
 
 void initFC(void) {
 
@@ -56,6 +75,10 @@ void initFC(void) {
 
 }
 
+void rebootFC(void) {
+    initFC();
+    tasksInit();
+}
 /**
  * reset the rx input buffers
  * (startup or on timeout)
