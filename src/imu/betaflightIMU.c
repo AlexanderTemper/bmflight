@@ -202,14 +202,14 @@ void updatebetaIMU(timeUs_t currentTimeUs) {
         return;
     }
 
-//        if (accGetAccumulationAverage(accAverage)) {
-//            useAcc = imuIsAccelerometerHealthy(accAverage);
-//        }
+    //gyro data
+    float gyroAverage[3];
+    gyroGetAccumulationAverage(gyroAverage);
 
     sensors_t *sensors = getSonsors();
 
     //printf("update Mahony %f \n", timeDiff/(float)1000);
-    imuMahonyAHRSupdate(deltaT * 1e-6f, DEGREES_TO_RADIANS(sensors->gyro.data[X]), DEGREES_TO_RADIANS(sensors->gyro.data[Y]), DEGREES_TO_RADIANS(sensors->gyro.data[Z]),
+    imuMahonyAHRSupdate(deltaT * 1e-6f, DEGREES_TO_RADIANS(gyroAverage[X]), DEGREES_TO_RADIANS(gyroAverage[Y]), DEGREES_TO_RADIANS(gyroAverage[Z]),
     true, sensors->acc.data[X], sensors->acc.data[Y], sensors->acc.data[Z],
     false, 0, 0, 0, dcm_kp);
     imuUpdateEulerAngles();

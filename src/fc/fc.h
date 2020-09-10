@@ -37,7 +37,7 @@ typedef struct config_s {
 
     int16_t ACC_TRIM[XYZ_AXIS_COUNT];
 
-    uint32_t ARM_TIMEOUT_US;
+    int32_t ARM_TIMEOUT_US;
     uint8_t MAX_ARMING_ANGLE;
     bool motorOneShot;
 } config_t;

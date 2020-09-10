@@ -105,13 +105,6 @@ static void taskAttitude(timeUs_t currentTimeUs) {
 
     updateACC(currentTimeUs);
 
-    //gyro data
-    float gyroAverage[3];
-    gyroGetAccumulationAverage(gyroAverage);
-    sensors->gyro.data[X] = gyroAverage[X] * sensors->gyro.scale;
-    sensors->gyro.data[Y] = gyroAverage[Y] * sensors->gyro.scale;
-    sensors->gyro.data[Z] = gyroAverage[Z] * sensors->gyro.scale;
-
     // update attitude make sure data in gyro.data[.] is in degree/s and acc.data[.] is in G
     updateEstimatedAttitude(currentTimeUs);
 
@@ -178,7 +171,7 @@ void tasksInit(void) {
     fcConfig = getFcConfig();
     schedulerInit();
     //enebale tasks
-    //setTaskEnabled(TASK_DEBUG, true);
+    setTaskEnabled(TASK_DEBUG, true);
     setTaskEnabled(TASK_SERIAL, true);
     setTaskEnabled(TASK_LOOP, true);
     setTaskEnabled(TASK_ATTITUDE, true);

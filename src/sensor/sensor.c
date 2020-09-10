@@ -141,24 +141,25 @@ void updateGyro(timeUs_t currentTimeUs) {
         return;
     }
 
-    sensors->gyro.trimed[X] = sensors->gyro.raw[X] - sensors->gyro.gyroZero[X];
-    sensors->gyro.trimed[Y] = sensors->gyro.raw[Y] - sensors->gyro.gyroZero[Y];
-    sensors->gyro.trimed[Z] = sensors->gyro.raw[Z] - sensors->gyro.gyroZero[Z];
+    int16_t trimmed[XYZ_AXIS_COUNT];
+    trimmed[X] = sensors->gyro.raw[X] - sensors->gyro.gyroZero[X];
+    trimmed[Y] = sensors->gyro.raw[Y] - sensors->gyro.gyroZero[Y];
+    trimmed[Z] = sensors->gyro.raw[Z] - sensors->gyro.gyroZero[Z];
 
     // optional filter the gyro data here
-    sensors->gyro.filtered[X] = sensors->gyro.trimed[X];
-    sensors->gyro.filtered[Y] = sensors->gyro.trimed[Y];
-    sensors->gyro.filtered[Z] = sensors->gyro.trimed[Z];
+    sensors->gyro.data[X] = trimmed[X] * sensors->gyro.scale;
+    sensors->gyro.data[Y] = trimmed[Y] * sensors->gyro.scale;
+    sensors->gyro.data[Z] = trimmed[Z] * sensors->gyro.scale;
 
 #ifdef ENABLE_AVG_GYRO
-    const timeDelta_t sampleDeltaUs = currentTimeUs - gyroAvarage.accumulationLastTimeSampledUs;
-    gyroAvarage.accumulationLastTimeSampledUs = currentTimeUs;
-    gyroAvarage.accumulatedMeasurementTimeUs += sampleDeltaUs;
-    for (int axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
-        // integrate using trapezium rule to avoid bias
-        gyroAvarage.accumulatedMeasurements[axis] += 0.5f * (gyroAvarage.gyroPrevious[axis] + sensors->gyro.trimed[axis]) * sampleDeltaUs;
-        gyroAvarage.gyroPrevious[axis] = sensors->gyro.trimed[axis];
-    }
+//    const timeDelta_t sampleDeltaUs = currentTimeUs - gyroAvarage.accumulationLastTimeSampledUs;
+//    gyroAvarage.accumulationLastTimeSampledUs = currentTimeUs;
+//    gyroAvarage.accumulatedMeasurementTimeUs += sampleDeltaUs;
+//    for (int axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
+//        // integrate using trapezium rule to avoid bias
+//        gyroAvarage.accumulatedMeasurements[axis] += 0.5f * (gyroAvarage.gyroPrevious[axis] + trimmed[axis]) * sampleDeltaUs;
+//        gyroAvarage.gyroPrevious[axis] = trimmed[axis];
+//    }
 #endif
 }
 

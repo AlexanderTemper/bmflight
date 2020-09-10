@@ -32,8 +32,6 @@ typedef struct gyroCalibration_s {
 typedef struct gyroDev_s {
     sensorGyroReadFuncPtr readFn; // read 3 axis data function
     int16_t raw[XYZ_AXIS_COUNT];
-    int16_t trimed[XYZ_AXIS_COUNT];
-    int16_t filtered[XYZ_AXIS_COUNT];
     timeUs_t lastReadTime;
     float scale;
     float data[XYZ_AXIS_COUNT];
