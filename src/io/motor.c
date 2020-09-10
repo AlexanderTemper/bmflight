@@ -19,7 +19,7 @@ static void (*writeMotorFuncPtr)(motors_command_t *motors);
 
 //QuadX mixing table
 static const motorMixer_t mixerQuadX[] = {
-    {
+    { // throttle , roll , pitch , yaw
         1.0f,
         -1.0f,
         1.0f,
@@ -70,7 +70,7 @@ void motorSetup(void (*writeMotorFnP)(motors_command_t *motors)) {
 }
 
 void updateMotors(void) {
-    int16_t maxMotor;
+    int16_t maxMotor, minMotor;
     uint32_t i;
     config_t *config = getFcConfig();
     status_t *status = getFcStatus();
@@ -84,15 +84,22 @@ void updateMotors(void) {
 
     // get max motor value
     maxMotor = motors_System->value[0];
+    minMotor = motors_System->value[0];
     for (i = 1; i < 4; i++) {
         if (motors_System->value[i] > maxMotor) {
             maxMotor = motors_System->value[i];
+        }
+        if (motors_System->value[i] < minMotor) {
+            minMotor = motors_System->value[i];
         }
     }
 
     for (i = 0; i < 4; i++) {
         if (maxMotor > config->MAXTHROTTLE) {    // this is a way to still have good gyro corrections if at least one motor reaches its max.
             motors_System->value[i] -= maxMotor - config->MAXTHROTTLE;
+        }
+        if (minMotor < config->MINTHROTTLE) { // this is a way to still have good gyro corrections if at least one motor reaches its min.
+            motors_System->value[i] += config->MINTHROTTLE - minMotor;
         }
 
         motors_System->value[i] = constrain(motors_System->value[i], config->MINTHROTTLE, config->MAXTHROTTLE);
