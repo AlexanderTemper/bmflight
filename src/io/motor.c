@@ -75,9 +75,6 @@ void updateMotors(void) {
     config_t *config = getFcConfig();
     status_t *status = getFcStatus();
 
-    // prevent "yaw jump" during yaw correction
-    mixer_System->axis[YAW] = constrain(mixer_System->axis[YAW], -100 - ABS(command_System->yaw), +100 + ABS(command_System->yaw));
-
     for (i = 0; i < 4; i++) {
         motors_System->value[i] = command_System->throttle * currentMixer[i].throttle + mixer_System->axis[PITCH] * currentMixer[i].pitch + mixer_System->axis[ROLL] * currentMixer[i].roll + -config->YAW_DIRECTION * mixer_System->axis[YAW] * currentMixer[i].yaw;
     }

@@ -19,7 +19,6 @@ typedef enum {
     RX_CHANL_COUNT
 } rc_alias_e;
 
-
 #define EEPROM_CONF_VERSION 3 //make sure to change if struct changes
 
 typedef struct config_s {
@@ -52,10 +51,10 @@ typedef struct rx_command_s {
 } rx_command_t;
 
 typedef struct command_s {
-    int16_t roll;
-    int16_t pitch;
-    int16_t yaw;
-    int16_t throttle;
+    int16_t roll;     //[-500;+500]
+    int16_t pitch;    //[-500;+500]
+    int16_t yaw;      //[-500;+500]
+    int16_t throttle; // [1000;2000]
     bool arm;
 } command_t;
 
@@ -67,7 +66,7 @@ typedef struct motors_command_s {
 } motors_command_t;
 
 /**
- * command for Motors Mixer interval [1000;2000] for THROTTLE and [-500;+500] for ROLL/PITCH/YAW
+ * command [-500;+500] for the axis
  */
 typedef struct mixer_command_s {
     int16_t axis[3];
@@ -89,7 +88,7 @@ typedef struct attitude_command_s {
 
 typedef struct control_s {
     rx_command_t rx;                     //raw data form rx
-    command_t fc_command;                //processed data from rx
+    command_t fc_command;                //processed data from rx // range
 
     attitude_command_t attitude_command; //data provided to attitude controller
     rate_command_t rate_command;         //data provided to rate controller

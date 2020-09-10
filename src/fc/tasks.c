@@ -95,7 +95,8 @@ static void taskLoop(timeUs_t currentTimeUs) {
     sensors->gyro.readFn(&sensors->gyro);
     updateGyro(currentTimeUs);
     //update rate controller make sure sensors->gyro.filtered[.] gets the new gyro data
-    updateRateController(fcControl, fcStatus->ARMED, &sensors->gyro, currentTimeUs);
+    //updateRateController(fcControl, fcStatus->ARMED, &sensors->gyro, currentTimeUs);
+    updateRateController(fcControl, true, &sensors->gyro, currentTimeUs); //TODO set Arming back
 
     //printf("pid motor commands = [%d,%d,%d;%d]", motor_command->value[ROLL], motor_command->value[PITCH], motor_command->value[YAW], motor_command->value[THROTTLE]);
     updateMotors();
