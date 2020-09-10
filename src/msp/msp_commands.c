@@ -136,6 +136,89 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         break;
     case MSP_BOXNAMES:
         break;
+    case MSP_PID_CONTROLLER:
+        sbufWriteU8(dst, 1);
+        break;
+    case MSP_PIDNAMES: {
+        const char pidNames[] = "ROLL;PITCH;YAW;LEVEL;MAG;";
+        for (const char *c = pidNames; *c; c++) {
+            sbufWriteU8(dst, *c);
+        }
+    }
+        break;
+    case MSP_PID_ADVANCED: {
+        sbufWriteU16(dst, 0);
+        sbufWriteU16(dst, 0);
+        sbufWriteU16(dst, 0); // was pidProfile.yaw_p_limit
+        sbufWriteU8(dst, 0); // reserved
+        sbufWriteU8(dst, 0); //currentPidProfile->vbatPidCompensation);
+        sbufWriteU8(dst, 0); //currentPidProfile->feedForwardTransition);
+        sbufWriteU8(dst, 0); // was low byte of currentPidProfile->dtermSetpointWeight
+        sbufWriteU8(dst, 0); // reserved
+        sbufWriteU8(dst, 0); // reserved
+        sbufWriteU8(dst, 0); // reserved
+        sbufWriteU16(dst, 0); //currentPidProfile->rateAccelLimit);
+        sbufWriteU16(dst, 0); //currentPidProfile->yawRateAccelLimit);
+        sbufWriteU8(dst, getFcConfig()->deciLevelAngleLimit / 10);
+        sbufWriteU8(dst, 0); // was pidProfile.levelSensitivity
+        sbufWriteU16(dst, 0); //currentPidProfile->itermThrottleThreshold);
+        sbufWriteU16(dst, 0); //currentPidProfile->itermAcceleratorGain);
+        sbufWriteU16(dst, 0); // was currentPidProfile->dtermSetpointWeight
+        sbufWriteU8(dst, 0); //currentPidProfile->iterm_rotation);
+    }
+        break;
+    case MSP_PID: {
+        for (int i = 0; i < 3; i++) {
+            sbufWriteU8(dst, getFcConfig()->rate_controller_config.Kp[i] * 100.0f);
+            sbufWriteU8(dst, getFcConfig()->rate_controller_config.Ki[i] * 100.0f);
+            sbufWriteU8(dst, getFcConfig()->rate_controller_config.Kd[i] * 100.0f);
+        }
+        //ATT
+        sbufWriteU8(dst, getFcConfig()->levelGain * 10);
+        sbufWriteU8(dst, 0);
+        sbufWriteU8(dst, 0);
+
+    }
+        break;
+
+    case MSP_RC_DEADBAND: {
+        uint8_t deadband = 1;     // introduce a deadband around the stick center for pitch and roll axis. Must be greater than zero.
+        uint8_t yaw_deadband = 1; // introduce a deadband around the stick center for yaw axis. Must be greater than zero.
+        sbufWriteU8(dst, deadband);
+        sbufWriteU8(dst, yaw_deadband);
+        sbufWriteU8(dst, 0);
+        sbufWriteU16(dst, 0);
+    }
+        break;
+    case MSP_RC_TUNING: {
+        uint8_t rcRates[3] = {
+            100,
+            100,
+            100 };
+        sbufWriteU8(dst, rcRates[X]);
+        sbufWriteU8(dst, 0); //rcExpo
+        for (int i = 0; i < 3; i++) {
+            sbufWriteU8(dst, 0); // R,P,Y see flight_dynamics_index_t
+        }
+        sbufWriteU8(dst, 0); //dynThrPID
+        sbufWriteU8(dst, 0); //thrMid8
+        sbufWriteU16(dst, 0); //thrExpo8
+        sbufWriteU8(dst, 0); //tpa_breakpoint
+        sbufWriteU8(dst, 0); //rcExpo
+        sbufWriteU8(dst, rcRates[Z]);
+        sbufWriteU8(dst, rcRates[Y]);
+        sbufWriteU8(dst, 0); //rcExpo
+
+        // added in 1.41
+        sbufWriteU8(dst, 0); //throttle_limit_type
+        sbufWriteU8(dst, 0); //throttle_limit_percent
+
+        // added in 1.42
+        sbufWriteU16(dst, 0);
+        sbufWriteU16(dst, 0);
+        sbufWriteU16(dst, 0);
+    }
+        break;
     case MSP_ACC_TRIM:
         sbufWriteU16(dst, getFcConfig()->ACC_TRIM[PITCH]);
         sbufWriteU16(dst, getFcConfig()->ACC_TRIM[ROLL]);
@@ -371,9 +454,40 @@ static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
     case MSP_SET_ARMING_DISABLED:
         //todo
         break;
+    case MSP_SET_RC_TUNING: {
+        //TODO
+    }
+        break;
+    case MSP_SET_PID: {
+        for (int i = 0; i < 3; i++) {
+            getFcConfig()->rate_controller_config.Kp[i] = sbufReadU8(src) / 100.0f;
+            getFcConfig()->rate_controller_config.Ki[i] = sbufReadU8(src) / 100.0f;
+            getFcConfig()->rate_controller_config.Kd[i] = sbufReadU8(src) / 100.0f;
+        }
+        getFcConfig()->levelGain = sbufReadU8(src) / 10.0f;
+    }
+        break;
+    case MSP_SET_PID_ADVANCED: {
+        sbufReadU16(src);
+        sbufReadU16(src);
+        sbufReadU16(src); // was pidProfile.yaw_p_limit
+        sbufReadU8(src); // reserved
+        sbufReadU8(src); //currentPidProfile->vbatPidCompensation = sbufReadU8(src);
+        sbufReadU8(src); //currentPidProfile->feedForwardTransition = sbufReadU8(src);
+        sbufReadU8(src); // was low byte of currentPidProfile->dtermSetpointWeight
+        sbufReadU8(src); // reserved
+        sbufReadU8(src); // reserved
+        sbufReadU8(src); // reserved
+        sbufReadU16(src); //currentPidProfile->rateAccelLimit = sbufReadU16(src);
+        sbufReadU16(src); //currentPidProfile->yawRateAccelLimit = sbufReadU16(src);
+        if (sbufBytesRemaining(src) >= 2) {
+            getFcConfig()->deciLevelAngleLimit = sbufReadU8(src) * 10;
+        }
+    }
+        break;
     case MSP_SET_NAME:
         memset(getFcConfig()->PILOTNAME, 0, 16);
-        for (unsigned int i = 0; i < MIN((const unsigned int)15, dataSize); i++) {
+        for (unsigned int i = 0; i < MIN((const unsigned int )15, dataSize); i++) {
             getFcConfig()->PILOTNAME[i] = sbufReadU8(src);
         }
         break;

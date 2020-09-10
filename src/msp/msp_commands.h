@@ -1,6 +1,7 @@
 #pragma once
-
+#include "global.h"
 #include "msp/msp.h"
+
 
 
 void mspFcProcessReply(mspPacket_t *cmd);

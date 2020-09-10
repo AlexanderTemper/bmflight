@@ -7,8 +7,11 @@
 /**
  * calculate mixer_command based on rate_command
  * @param fcControl
- * @param armed
  * @param gyro
+ * @param pidConfig
  * @param currentTime
  */
-void updateRateController(control_t* fcControl, bool armed, gyroDev_t *gyro, timeUs_t currentTime);
+void updateRateController(control_t* fcControl, gyroDev_t *gyro, pid_config_t *pidConfig, timeUs_t currentTime);
+
+
+void resetRateController(void);

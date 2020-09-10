@@ -19,13 +19,17 @@ typedef enum {
     RX_CHANL_COUNT
 } rc_alias_e;
 
-#define EEPROM_CONF_VERSION 3 //make sure to change if struct changes
+#define EEPROM_CONF_VERSION 5 //make sure to change if struct changes
+
+typedef struct pid_config_s {
+    float Kp[XYZ_AXIS_COUNT];
+    float Ki[XYZ_AXIS_COUNT];
+    float Kd[XYZ_AXIS_COUNT];
+} pid_config_t;
 
 typedef struct config_s {
     uint16_t CONFIG_VERSION;
-
     char PILOTNAME[16];
-
     int16_t MINTHROTTLE;
     int16_t MAXTHROTTLE;
     int16_t MINCOMMAND;
@@ -33,16 +37,18 @@ typedef struct config_s {
     int16_t MINCHECK;
     int16_t MAXCHECK;
     uint8_t YAW_DIRECTION;
-
     int16_t ACC_TRIM[XYZ_AXIS_COUNT];
-
     int32_t ARM_TIMEOUT_US;
     uint8_t MAX_ARMING_ANGLE;
+    pid_config_t rate_controller_config;
+    float levelGain;
+    uint16_t deciLevelAngleLimit;
     bool motorOneShot;
 } config_t;
 
 typedef struct status_s {
     bool ARMED;
+    bool ANGLE;
 } status_t;
 
 typedef struct rx_command_s {

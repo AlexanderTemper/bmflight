@@ -21,6 +21,21 @@ static config_t default_fc_config = {
     .motorOneShot = true,
     .ARM_TIMEOUT_US = 500000,
     .MAX_ARMING_ANGLE = 25,
+    .rate_controller_config = {
+        .Kp = {
+            0.1f,
+            0.2f,
+            0.3f },
+        .Ki = {
+            0.01f,
+            0.02f,
+            0.03f },
+        .Kd = {
+            0.04f,
+            0.05f,
+            0.06f } },
+    .levelGain = 0.0f,
+    .deciLevelAngleLimit = 150,
     .ACC_TRIM = {
         -38,
         -19,
@@ -61,6 +76,8 @@ void initFC(void) {
     memcpy(&fc_config, loaded_config, sizeof(config_t));
     // init status of fc
     fc_status.ARMED = false;
+    fc_status.ANGLE = false;
+
     setStatusLedLevel(ARM_LED, false);
     setStatusLedLevel(CALIBRATION_LED, false);
     setStatusLedLevel(ERROR_LED, false);

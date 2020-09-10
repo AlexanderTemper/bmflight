@@ -4,4 +4,4 @@
 #include "fc/fc.h"
 #include "imu/imu.h"
 
-void updateAttitudeController(control_t* fcControl, bool armed, timeUs_t currentTime, attitudeEulerAngles_t *att);
+void updateAttitudeController(control_t* fcControl, config_t *fcConfig, timeUs_t currentTime, attitudeEulerAngles_t *att);

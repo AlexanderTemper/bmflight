@@ -7,25 +7,10 @@
 // 125000 -> on max error (+-500) we would need 500ms to set back to zero
 #define I_WIND_UP_MAX 125000.0f
 
-static float Kp[XYZ_AXIS_COUNT] = {
-    1.0f,
-    1.0f,
-    1.0f };
-
-static float Ki[XYZ_AXIS_COUNT] = {
-    1.0f,
-    1.0f,
-    1.0f };
-
-static float Kd[XYZ_AXIS_COUNT] = {
-    1.0f,
-    1.0f,
-    1.0f };
-
 static float previousError[XYZ_AXIS_COUNT];
 static float errorSum[XYZ_AXIS_COUNT];
 
-static void resetRateController(void) {
+void resetRateController(void) {
     previousError[X] = 0;
     previousError[Y] = 0;
     previousError[Z] = 0;
@@ -41,14 +26,7 @@ static void resetRateController(void) {
  * @param gyro
  * @param currentTime
  */
-void updateRateController(control_t* fcControl, bool armed, gyroDev_t *gyro, timeUs_t currentTime) {
-    if (!armed) {
-        resetRateController();
-        fcControl->mixer_command.axis[X] = 0;
-        fcControl->mixer_command.axis[Y] = 0;
-        fcControl->mixer_command.axis[Z] = 0;
-        return;
-    }
+void updateRateController(control_t* fcControl, gyroDev_t *gyro, pid_config_t *pidConfig, timeUs_t currentTime) {
 
     // calculate error
     float error[XYZ_AXIS_COUNT];
@@ -72,9 +50,9 @@ void updateRateController(control_t* fcControl, bool armed, gyroDev_t *gyro, tim
     deltaError[Y] = error[Y] - previousError[Y];
     deltaError[Z] = error[Z] - previousError[Z];
 
-    int16_t x = error[X] * Kp[X] + errorSum[X] * Ki[X] + deltaError[X] * Kd[X];
-    int16_t y = error[Y] * Kp[Y] + errorSum[Y] * Ki[Y] + deltaError[Y] * Kd[Y];
-    int16_t z = error[Z] * Kp[Z] + errorSum[Z] * Ki[Z] + deltaError[Z] * Kd[Z];
+    int16_t x = error[X] * pidConfig->Kp[X] + errorSum[X] * pidConfig->Ki[X] + deltaError[X] * pidConfig->Kd[X];
+    int16_t y = error[Y] * pidConfig->Kp[Y] + errorSum[Y] * pidConfig->Ki[Y] + deltaError[Y] * pidConfig->Kd[Y];
+    int16_t z = error[Z] * pidConfig->Kp[Z] + errorSum[Z] * pidConfig->Ki[Z] + deltaError[Z] * pidConfig->Kd[Z];
 
     // set new PID Value
     fcControl->mixer_command.axis[X] = constrain(x, -500, +500);
