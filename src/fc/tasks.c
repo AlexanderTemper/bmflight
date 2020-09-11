@@ -168,7 +168,7 @@ static task_t tasks[TASK_COUNT] = {
         .taskName = "TASK_LOOP",
         .taskFunc = taskLoop,
         .staticPriority = 200,
-        .desiredPeriodUs = TASK_PERIOD_HZ(500), } };
+        .desiredPeriodUs = TASK_PERIOD_HZ(TARGET_LOOP_HZ), } };
 
 /**
  * get the task with the given taskId or NULL on error

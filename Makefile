@@ -4,7 +4,7 @@ APP_NAME = BMF055FlightController
 
 EXE_FILE = bin/$(APP_NAME).out
 
-TARGET = BMF055
+TARGET = SITL
 BUILD_DIR := build/
 
 # Choose target MCU
@@ -28,6 +28,7 @@ INC_PATH += \
 # List of C source files.
 CSRCS += \
 	src/main.c	                  \
+	src/blackbox/blackbox.c       \
 	src/common/debug.c            \
 	src/common/streambuf.c        \
 	src/common/time.c             \

@@ -11,4 +11,8 @@ typedef enum {
     XYZ_AXIS_COUNT
 } axis_e;
 
+#define USE_BLACKBOX
+
+#define TARGET_LOOP_HZ 500
+
 //#include <stdio.h> // Todo weg

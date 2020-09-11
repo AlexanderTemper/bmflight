@@ -22,10 +22,12 @@
 #define MSP_ARMING_CONFIG          61
 #define MSP_SET_ARMING_CONFIG      62
 #define MSP_RX_MAP                 64     //out message get channel map (also returns number of channels total)
-#define MSP_REBOOT                 68 //in message reboot settings
+#define MSP_REBOOT                 68     //in message reboot settings
 #define MSP_DATAFLASH_SUMMARY      70     //out message - get description of dataflash chip
 #define MSP_FAILSAFE_CONFIG        75     //out message         Returns FC Fail-Safe settings
-#define MSP_SET_FAILSAFE_CONFIG    76 //in message          Sets FC Fail-Safe settings
+#define MSP_SET_FAILSAFE_CONFIG    76     //in message          Sets FC Fail-Safe settings
+#define MSP_BLACKBOX_CONFIG        80     //out message         Get blackbox settings
+#define MSP_SET_BLACKBOX_CONFIG    81     //in message          Set blackbox settings
 #define MSP_ADVANCED_CONFIG        90
 #define MSP_PID_ADVANCED           94
 #define MSP_SET_PID_ADVANCED       95

@@ -1,9 +1,11 @@
+#include "blackbox/blackbox.h"
 #include "fc/fc.h"
 #include "imu/imu.h"
 #include "io/pin.h"
 #include "sensor/sensor.h"
 #include "eeprom/eeprom_emulation.h"
 #include "fc/tasks.h"
+
 #include <string.h>
 
 config_t fc_config;
@@ -41,6 +43,7 @@ static config_t default_fc_config = {
         -19,
         42 },
     .CONFIG_VERSION = EEPROM_CONF_VERSION,
+    .blackboxEnabled = false,
     .PILOTNAME = {
         'T',
         'e',
@@ -89,7 +92,10 @@ void initFC(void) {
     sen->acc.accZero[Z] = fc_config.ACC_TRIM[Z];
     //initialize rx channels
     resetRx();
-
+#ifdef USE_BLACKBOX
+    //init blackBox
+    blackboxInit(fc_config.blackboxEnabled);
+#endif
 }
 
 void rebootFC(void) {

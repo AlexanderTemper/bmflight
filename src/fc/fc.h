@@ -19,7 +19,7 @@ typedef enum {
     RX_CHANL_COUNT
 } rc_alias_e;
 
-#define EEPROM_CONF_VERSION 5 //make sure to change if struct changes
+#define EEPROM_CONF_VERSION 6 //make sure to change if struct changes
 
 typedef struct pid_config_s {
     float Kp[XYZ_AXIS_COUNT];
@@ -44,6 +44,7 @@ typedef struct config_s {
     float levelGain;
     uint16_t deciLevelAngleLimit;
     bool motorOneShot;
+    bool blackboxEnabled;
 } config_t;
 
 typedef struct status_s {

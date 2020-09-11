@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include "blackbox/blackbox.h"
 #include "common/maths.h"
 #include "common/debug.h"
 #include "msp/msp_protocol.h"
@@ -121,7 +122,7 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         sbufWriteU8(dst, 0); // gyroConfig()->gyro_to_use);
         sbufWriteU8(dst, 0); //  gyroConfig()->gyro_high_fsr);
         sbufWriteU8(dst, 0); //  gyroConfig()->gyroMovementCalibrationThreshold);
-        sbufWriteU16(dst, 0); // gyroConfig()->gyroCalibrationDuration);
+        sbufWriteU16(dst, 200); // gyroConfig()->gyroCalibrationDuration);
         sbufWriteU16(dst, 0); //  gyroConfig()->gyro_offset_yaw);
         sbufWriteU8(dst, 0); //  gyroConfig()->checkOverflow);
         //Added in MSP API 1.42
@@ -136,6 +137,15 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         break;
     case MSP_BOXNAMES:
         break;
+#ifdef USE_BLACKBOX
+    case MSP_BLACKBOX_CONFIG:
+        sbufWriteU8(dst, 1); //Blackbox supported
+        sbufWriteU8(dst, blackboxConfig()->device);
+        sbufWriteU8(dst, 1); // Rate numerator, not used anymore
+        sbufWriteU8(dst, blackboxGetRateDenom());
+        sbufWriteU16(dst, blackboxConfig()->p_ratio);
+        break;
+#endif
     case MSP_PID_CONTROLLER:
         sbufWriteU8(dst, 1);
         break;
@@ -254,11 +264,11 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
 //            FRSKY_OSD = 16
 //        };
         uint16_t mask = 0;
-        sbufWriteU16(dst, mask | 0b000000001000001);
+        sbufWriteU16(dst, mask | 0b000000011000001);
+        sbufWriteU8(dst, 10);
         sbufWriteU8(dst, 5);
         sbufWriteU8(dst, 5);
-        sbufWriteU8(dst, 5);
-        sbufWriteU8(dst, 5);
+        sbufWriteU8(dst, 0);
     }
         break;
     case MSP_BOARD_ALIGNMENT_CONFIG: {
@@ -503,6 +513,15 @@ static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
     case MSP_EEPROM_WRITE:
         write_EEPROM(getFcConfig());
         break;
+#ifdef USE_BLACKBOX
+    case MSP_SET_BLACKBOX_CONFIG: {
+        if(sbufReadU8(src) == BLACKBOX_DEVICE_SERIAL){
+            blackboxConfig()->device = sbufReadU8(src);
+            getFcConfig()->blackboxEnabled = true;
+        }
+    }
+        break;
+#endif
     case MSP_SET_FAILSAFE_CONFIG:
         getFcConfig()->ARM_TIMEOUT_US = sbufReadU8(src) * 100000;
         break;
