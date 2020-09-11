@@ -49,13 +49,13 @@ static void clock_configure_gclk_generator_1(void) {
 }
 
 /**
- * 2Mhz clock for serial interface
+ * 8Mhz clock for serial interface
  */
 static void clock_configure_gclk_generator_2(void) {
     struct system_gclk_gen_config gclock_gen_conf;
     system_gclk_gen_get_config_defaults(&gclock_gen_conf);
     gclock_gen_conf.source_clock = SYSTEM_CLOCK_SOURCE_OSC8M;
-    gclock_gen_conf.division_factor = 4;
+    gclock_gen_conf.division_factor = 1;
     system_gclk_gen_set_config(GCLK_GENERATOR_2, &gclock_gen_conf);
     system_gclk_gen_enable(GCLK_GENERATOR_2);
 }

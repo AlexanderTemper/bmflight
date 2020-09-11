@@ -20,7 +20,7 @@ static void msp_usart_configure(void) {
     usart_get_config_defaults(&config_usart);
 
     /* set USART Baudrate*/
-    config_usart.baudrate = UINT32_C(115200);
+    config_usart.baudrate = UINT32_C(500000);
     /* Set USART GCLK */
     config_usart.generator_source = GCLK_GENERATOR_2;
     /* Se USART MUX setting */

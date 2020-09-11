@@ -157,8 +157,8 @@ void updateGyro(timeUs_t currentTimeUs) {
     gyroAvarage.accumulatedMeasurementTimeUs += sampleDeltaUs;
     for (int axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
         // integrate using trapezium rule to avoid bias
-        gyroAvarage.accumulatedMeasurements[axis] += 0.5f * (gyroAvarage.gyroPrevious[axis] + trimmed[axis]) * sampleDeltaUs;
-        gyroAvarage.gyroPrevious[axis] = trimmed[axis];
+        gyroAvarage.accumulatedMeasurements[axis] += 0.5f * (gyroAvarage.gyroPrevious[axis] + sensors->gyro.data[axis]) * sampleDeltaUs;
+        gyroAvarage.gyroPrevious[axis] = sensors->gyro.data[axis];
     }
 #endif
 }

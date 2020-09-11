@@ -149,7 +149,7 @@ static void taskJoy(timeUs_t currentTimeUs) {
 }
 
 static void taskSystem(timeUs_t currentTimeUs) {
-
+    mspSerialPush(&mspPort, MSP_ATTITUDE, 0, 0, MSP_DIRECTION_REQUEST);
 }
 static void taskHandleSerial(timeUs_t currentTimeUs) {
     if (uart) {

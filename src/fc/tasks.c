@@ -88,10 +88,9 @@ static void taskLoop(timeUs_t currentTimeUs) {
         fcStatus->ARMED = false;
         resetRx();
         setStatusLedLevel(ERROR_LED, true);
-        updateMotors();
-        return;
+    } else {
+        setStatusLedLevel(ERROR_LED, false);
     }
-    setStatusLedLevel(ERROR_LED, false);
 
     //gyro based operations
     sensors->gyro.readFn(&sensors->gyro);
