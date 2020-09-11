@@ -55,6 +55,7 @@ typedef struct mspPort_s {
 
 
 void mspDebugData(const uint8_t* data, uint16_t len);
+void mspWriteBlackBoxData(const uint8_t* data, uint16_t len);
 void initMspDebugPort(mspPort_t *mspPort);
 void mspInit(mspPort_t *mspPort, struct serialPort_s *serialPort);
 

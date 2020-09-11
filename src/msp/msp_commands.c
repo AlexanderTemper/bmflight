@@ -72,8 +72,8 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
 //        { BOXHORIZON, "HORIZON", 2 },
 
         taskInfo_t taskInfo;
-        getTaskInfo(TASK_ATTITUDE, &taskInfo);
-        sbufWriteU16(dst, taskInfo.averageDeltaTimeUs); // TODO not Real Cycle Time
+        getTaskInfo(TASK_LOOP, &taskInfo);
+        sbufWriteU16(dst, taskInfo.averageDeltaTimeUs);
         sbufWriteU16(dst, 0); // i2c errors
         //gyro,range,gps,mag,baro,acc
         bool gyro = true;
@@ -411,12 +411,11 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         }
     }
         break;
-    case MSP_MOTOR: {
-        motors_command_t *motors = &getFcControl()->motor_command;
-        for (unsigned i = 0; i < 4; i++) {
-            sbufWriteU16(dst, motors->value[i]);
-        }
-    }
+    case MSP_BLACKBOX_START:
+        blackboxStart();
+        break;
+    case MSP_BLACKBOX_STOP:
+        blackboxStop();
         break;
     case MSP_MIXER_CONFIG:
         sbufWriteU8(dst, 3); //QUADX
@@ -515,7 +514,7 @@ static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
         break;
 #ifdef USE_BLACKBOX
     case MSP_SET_BLACKBOX_CONFIG: {
-        if(sbufReadU8(src) == BLACKBOX_DEVICE_SERIAL){
+        if (sbufReadU8(src) == BLACKBOX_DEVICE_SERIAL) {
             blackboxConfig()->device = sbufReadU8(src);
             getFcConfig()->blackboxEnabled = true;
         }

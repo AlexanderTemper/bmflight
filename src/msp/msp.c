@@ -167,6 +167,10 @@ void mspDebugData(const uint8_t* data, uint16_t len) {
     mspSerialPush(debugPort, MSP_DEBUGMSG, (uint8_t*) data, len, MSP_DIRECTION_REPLY);
 }
 
+void mspWriteBlackBoxData(const uint8_t* data, uint16_t len) {
+    mspSerialPush(debugPort, MSP_BLACKBOX_DATA, (uint8_t*) data, len, MSP_DIRECTION_REPLY);
+}
+
 /**
  * command was received send reply
  * @param msp

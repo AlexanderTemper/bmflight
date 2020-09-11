@@ -11,10 +11,12 @@
 #include "scheduler/scheduler.h"
 #include "common/streambuf.h"
 
+#define BLACKBOX_LOGFILE_NAME "bmflog.TXT"
 static struct timespec start_time;
 static serialPort_t serialInstance;
 static mspPort_t mspPort;
 static tcpPort_t tcpSerialPort;
+static FILE *blackBoxFile;
 bool uart = false;
 
 #define BUFFER_SIZE 256
@@ -102,6 +104,11 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
         printf(" %d %d %d\n", att[X], att[Y], att[Z]);
         break;
     }
+    case MSP_BLACKBOX_DATA: {
+        fwrite(src->ptr, 1, sbufBytesRemaining(src), blackBoxFile);
+        //printf(" , ");
+        break;
+    }
     case MSP_RAW_IMU: {
         int16_t acc[3];
         int16_t gyro[3];
@@ -149,7 +156,12 @@ static void taskJoy(timeUs_t currentTimeUs) {
 }
 
 static void taskSystem(timeUs_t currentTimeUs) {
-    mspSerialPush(&mspPort, MSP_ATTITUDE, 0, 0, MSP_DIRECTION_REQUEST);
+    // mspSerialPush(&mspPort, MSP_ATTITUDE, 0, 0, MSP_DIRECTION_REQUEST);
+}
+
+static void taskLogger(timeUs_t currentTimeUs) {
+    mspSerialPush(&mspPort, MSP_BLACKBOX_STOP, 0, 0, MSP_DIRECTION_REQUEST);
+    mspSerialPush(&mspPort, MSP_BLACKBOX_START, 0, 0, MSP_DIRECTION_REQUEST);
 }
 static void taskHandleSerial(timeUs_t currentTimeUs) {
     if (uart) {
@@ -169,6 +181,11 @@ static task_t tasks[TASK_COUNT] = {
         .taskFunc = taskJoy,
         .staticPriority = 1,
         .desiredPeriodUs = TASK_PERIOD_HZ(100), },
+    [TASK_DEBUG] = {
+        .taskName = "TASK_DEBUG",
+        .taskFunc = taskLogger,
+        .staticPriority = 1,
+        .desiredPeriodUs = 2000000, },//2sec
     [TASK_SYSTEM] = {
         .taskName = "TASK_SYSTEM",
         .taskFunc = taskSystem,
@@ -235,6 +252,11 @@ int main(int argc, char *argv[]) {
     mspPort.mspProcessReplyFnPtr = &mspFcProcessReply;
     mspInit(&mspPort, &serialInstance);
 
+    blackBoxFile = fopen(BLACKBOX_LOGFILE_NAME, "a+");
+    if (blackBoxFile == NULL) {
+        fprintf(stderr, "[FLASH] failed to create '%s'\n", BLACKBOX_LOGFILE_NAME);
+        return 1;
+    }
     schedulerInit();
 
     int js = initJoy("/dev/input/js0");
@@ -246,6 +268,7 @@ int main(int argc, char *argv[]) {
     }
 
     setTaskEnabled(TASK_SERIAL, true);
+    setTaskEnabled(TASK_DEBUG, true);
     while (1) {
         scheduler();
         delayNanoSeconds(50);

@@ -1,3 +1,4 @@
+#include "blackbox/blackbox.h"
 #include "fc/tasks.h"
 #include "fc/fc.h"
 #include "io/motor.h"
@@ -109,6 +110,11 @@ static void taskLoop(timeUs_t currentTimeUs) {
     //update Motor
     //printf("pid motor commands = [%d,%d,%d;%d]", motor_command->value[ROLL], motor_command->value[PITCH], motor_command->value[YAW], motor_command->value[THROTTLE]);
     updateMotors();
+#ifdef USE_BLACKBOX
+    //init blackBox
+    blackboxUpdate(currentTimeUs);
+#endif
+
 }
 static void taskAttitude(timeUs_t currentTimeUs) {
     sensors->acc.readFn(&sensors->acc);

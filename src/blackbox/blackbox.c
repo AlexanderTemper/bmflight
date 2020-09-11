@@ -27,7 +27,9 @@
 
 #ifdef USE_BLACKBOX
 
-#include "blackbox.h"
+#include "blackbox/blackbox.h"
+#include "msp/msp.h"
+#include "common/streambuf.h"
 
 #define DEFAULT_BLACKBOX_DEVICE  BLACKBOX_DEVICE_NONE
 // number of flight loop iterations before logging I-frame
@@ -49,6 +51,150 @@ blackboxConfig_t* blackboxConfig(void) {
 uint8_t blackboxGetRateDenom(void) {
     return blackboxPInterval;
 }
+
+typedef enum BlackboxState {
+    BLACKBOX_STATE_DISABLED = 0,
+    BLACKBOX_STATE_STOPPED,
+    BLACKBOX_STATE_SEND_START,
+    BLACKBOX_STATE_SEND_HEADER,
+    BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_NAMES,
+    BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_PREDICTOR,
+    BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_ENCODING,
+    BLACKBOX_STATE_SEND_SLOW_HEADER,
+    BLACKBOX_STATE_SEND_SYSINFO,
+    BLACKBOX_STATE_SHUTTING_DOWN,
+} BlackboxState;
+
+static BlackboxState blackboxState;
+
+#define LOG_LINE_MAX_BYTES 128
+//log buffer to wirte data
+static uint8_t logLineData[LOG_LINE_MAX_BYTES];
+static sbuf_t logBuffer;
+
+static void blackboxWrite(uint8_t value) {
+    sbufWriteU8(&logBuffer, value);
+}
+/**
+ * Write an unsigned integer to the blackbox using variable byte encoding.
+ */
+static void blackboxWriteUnsignedVB(uint32_t value) {
+    //While this isn't the final byte (we can only write 7 bits at a time)
+    while (value > 127) {
+        blackboxWrite((uint8_t) (value | 0x80)); // Set the high bit to mean "more bytes follow"
+        value >>= 7;
+    }
+    blackboxWrite(value);
+}
+/**
+ * ZigZag encoding maps all values of a signed integer into those of an unsigned integer in such
+ * a way that numbers of small absolute value correspond to small integers in the result.
+ *
+ * (Compared to just casting a signed to an unsigned which creates huge resulting numbers for
+ * small negative integers).
+ */
+static uint32_t zigzagEncode(int32_t value) {
+    return (uint32_t) ((value << 1) ^ (value >> 31));
+}
+
+/**
+ * Write a signed integer to the blackbox serial port using ZigZig and variable byte encoding.
+ */
+static void blackboxWriteSignedVB(int32_t value) {
+    //ZigZag encode to make the value always positive
+    blackboxWriteUnsignedVB(zigzagEncode(value));
+}
+static uint32_t loopIteration = 0;
+static void writeSysInfo(void) {
+    sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES]);
+    blackboxWriteUnsignedVB('I'); //Todo p frames
+
+    blackboxWriteUnsignedVB(loopIteration++);
+    blackboxWriteUnsignedVB(micros());
+    blackboxWriteSignedVB(-123456);
+    blackboxWriteSignedVB(2);
+    blackboxWriteSignedVB(2000000);
+
+    sbufSwitchToReader(&logBuffer, &logLineData[0]);
+    mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
+}
+static const uint8_t blackboxHeader[] = "H Product:Blackbox flight data recorder by Nicholas Sherlock\nH Data version:2\n";
+static const uint8_t headerName[] = "H Field I name:loopIteration,time,axisP[0],axisP[1],axisP[2]\n";
+static const uint8_t headerPredictor[] = "H Field I predictor:0,0,0,0,0\n";
+static const uint8_t headerEncoding[] = "H Field X encoding:1,1,0,0,0\n";
+
+void blackboxStart(void) {
+    if (blackboxState == BLACKBOX_STATE_STOPPED) {
+        blackboxState = BLACKBOX_STATE_SEND_START;
+    }
+}
+void blackboxStop(void) {
+    if (blackboxState != BLACKBOX_STATE_STOPPED) {
+        blackboxState = BLACKBOX_STATE_SHUTTING_DOWN;
+    }
+}
+void blackboxUpdate(timeUs_t currentTimeUs) {
+    switch (blackboxState) {
+    case BLACKBOX_STATE_STOPPED:
+        break;
+    case BLACKBOX_STATE_SEND_START:
+        //if (ARMING_FLAG(ARMED)) {
+        mspWriteBlackBoxData(blackboxHeader, sizeof(blackboxHeader));
+        blackboxState = BLACKBOX_STATE_SEND_HEADER;
+        //}
+        break;
+
+    case BLACKBOX_STATE_SEND_HEADER: {
+        //I and P definition
+        const uint8_t iInterval[] = "H I interval: 16\n"; //todo use blackboxIInterval
+        mspWriteBlackBoxData(iInterval, sizeof(iInterval));
+        const uint8_t pInterval[] = "H P interval: 1/16\n"; //todo use blackboxPInterval (currently no P frame)
+        mspWriteBlackBoxData(pInterval, sizeof(pInterval));
+        blackboxState = BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_NAMES;
+    }
+        break;
+
+    case BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_NAMES:
+        mspWriteBlackBoxData(headerName, sizeof(headerName));
+        blackboxState = BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_PREDICTOR;
+        break;
+
+    case BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_PREDICTOR:
+        mspWriteBlackBoxData(headerPredictor, sizeof(headerPredictor));
+        blackboxState = BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_ENCODING;
+        break;
+
+    case BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_ENCODING:
+        mspWriteBlackBoxData(headerEncoding, sizeof(headerEncoding));
+        blackboxState = BLACKBOX_STATE_SEND_SYSINFO;
+        break;
+
+    case BLACKBOX_STATE_SEND_SYSINFO:
+        writeSysInfo();
+        break;
+
+    case BLACKBOX_STATE_SHUTTING_DOWN: {
+        const uint8_t endMarker[] = {
+            'E',
+            0xFF,
+            'E',
+            'n',
+            'd',
+            ' ',
+            'o',
+            'f',
+            ' ',
+            'l',
+            'o',
+            'g',
+            0 };
+        mspWriteBlackBoxData(endMarker, sizeof(endMarker));
+        blackboxState = BLACKBOX_STATE_STOPPED;
+    }
+        break;
+    }
+
+}
 /**
  * Call during system startup to initialize the blackbox.
  */
@@ -69,11 +215,11 @@ void blackboxInit(bool enabled) {
     } else {
         blackboxPInterval = blackboxIInterval / blackboxConfig()->p_ratio;
     }
-//    if (blackboxConfig()->device) {
-//        blackboxSetState(BLACKBOX_STATE_STOPPED);
-//    } else {
-//        blackboxSetState(BLACKBOX_STATE_DISABLED);
-//    }
+    if (blackboxConfig()->device) {
+        blackboxState = BLACKBOX_STATE_STOPPED;
+    } else {
+        blackboxState = BLACKBOX_STATE_DISABLED;
+    }
     blackboxSInterval = blackboxIInterval * 256; // S-frame is written every 256*32 = 8192ms, approx every 8 seconds
 }
 #endif

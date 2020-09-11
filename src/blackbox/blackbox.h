@@ -58,5 +58,7 @@ blackboxConfig_t* blackboxConfig(void);
 
 void blackboxInit(bool enabled);
 void blackboxUpdate(timeUs_t currentTimeUs);
+void blackboxStart(void);
+void blackboxStop(void);
 uint8_t blackboxGetRateDenom(void);
 

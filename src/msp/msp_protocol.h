@@ -61,6 +61,9 @@
 
 // Additional commands that are not compatible with MultiWii
 #define MSP_DEBUGMSG               253
+#define MSP_BLACKBOX_DATA          142
+#define MSP_BLACKBOX_START         143
+#define MSP_BLACKBOX_STOP          144
 
 
 
