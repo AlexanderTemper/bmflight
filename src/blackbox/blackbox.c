@@ -104,6 +104,7 @@ static void blackboxWriteSignedVB(int32_t value) {
     //ZigZag encode to make the value always positive
     blackboxWriteUnsignedVB(zigzagEncode(value));
 }
+int dummy = -1000;
 static uint32_t loopIteration = 0;
 static void writeSysInfo(void) {
     sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES]);
@@ -111,18 +112,21 @@ static void writeSysInfo(void) {
 
     blackboxWriteUnsignedVB(loopIteration++);
     blackboxWriteUnsignedVB(micros());
-    blackboxWriteSignedVB(-123456);
-    blackboxWriteSignedVB(2);
-    blackboxWriteSignedVB(2000000);
+    blackboxWriteSignedVB(dummy);
+    blackboxWriteSignedVB(0);
+    blackboxWriteSignedVB(0);
 
     sbufSwitchToReader(&logBuffer, &logLineData[0]);
     mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
+    dummy++;
 }
 static const uint8_t blackboxHeader[] = "H Product:Blackbox flight data recorder by Nicholas Sherlock\nH Data version:2\n";
 static const uint8_t headerName[] = "H Field I name:loopIteration,time,axisP[0],axisP[1],axisP[2]\n";
 static const uint8_t headerPredictor[] = "H Field I predictor:0,0,0,0,0\n";
-static const uint8_t headerEncoding[] = "H Field X encoding:1,1,0,0,0\n";
+static const uint8_t headerEncoding[] = "H Field I encoding:1,1,0,0,0\n";
 
+static const uint8_t pHeaderPredictor[] = "H Field P predictor:6,2,1,1,1\n";
+static const uint8_t pHheaderEncoding[] = "H Field P encoding:9,0,0,0,0\n";
 void blackboxStart(void) {
     if (blackboxState == BLACKBOX_STATE_STOPPED) {
         blackboxState = BLACKBOX_STATE_SEND_START;
@@ -161,11 +165,13 @@ void blackboxUpdate(timeUs_t currentTimeUs) {
 
     case BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_PREDICTOR:
         mspWriteBlackBoxData(headerPredictor, sizeof(headerPredictor));
+        mspWriteBlackBoxData(pHeaderPredictor, sizeof(pHeaderPredictor));
         blackboxState = BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_ENCODING;
         break;
 
     case BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_ENCODING:
         mspWriteBlackBoxData(headerEncoding, sizeof(headerEncoding));
+        mspWriteBlackBoxData(pHheaderEncoding, sizeof(pHheaderEncoding));
         blackboxState = BLACKBOX_STATE_SEND_SYSINFO;
         break;
 

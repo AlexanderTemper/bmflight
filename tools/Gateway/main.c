@@ -161,7 +161,6 @@ static void taskSystem(timeUs_t currentTimeUs) {
 
 static void taskLogger(timeUs_t currentTimeUs) {
     mspSerialPush(&mspPort, MSP_BLACKBOX_STOP, 0, 0, MSP_DIRECTION_REQUEST);
-    mspSerialPush(&mspPort, MSP_BLACKBOX_START, 0, 0, MSP_DIRECTION_REQUEST);
 }
 static void taskHandleSerial(timeUs_t currentTimeUs) {
     if (uart) {
@@ -185,7 +184,7 @@ static task_t tasks[TASK_COUNT] = {
         .taskName = "TASK_DEBUG",
         .taskFunc = taskLogger,
         .staticPriority = 1,
-        .desiredPeriodUs = 2000000, },//2sec
+        .desiredPeriodUs = 60000000, },//60sec
     [TASK_SYSTEM] = {
         .taskName = "TASK_SYSTEM",
         .taskFunc = taskSystem,
@@ -269,6 +268,8 @@ int main(int argc, char *argv[]) {
 
     setTaskEnabled(TASK_SERIAL, true);
     setTaskEnabled(TASK_DEBUG, true);
+
+    mspSerialPush(&mspPort, MSP_BLACKBOX_START, 0, 0, MSP_DIRECTION_REQUEST); //start logging immediate
     while (1) {
         scheduler();
         delayNanoSeconds(50);
