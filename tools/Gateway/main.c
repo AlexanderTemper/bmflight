@@ -106,6 +106,12 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
     }
     case MSP_BLACKBOX_DATA: {
         fwrite(src->ptr, 1, sbufBytesRemaining(src), blackBoxFile);
+        fclose(blackBoxFile);
+        blackBoxFile = fopen(BLACKBOX_LOGFILE_NAME, "a+");
+        if (blackBoxFile == NULL) {
+            fprintf(stderr, "[BLACKBOX] failed to create '%s'\n", BLACKBOX_LOGFILE_NAME);
+        }
+        fwrite(src->ptr, 1, sbufBytesRemaining(src), stdout);
         //printf(" , ");
         break;
     }
@@ -184,7 +190,7 @@ static task_t tasks[TASK_COUNT] = {
         .taskName = "TASK_DEBUG",
         .taskFunc = taskLogger,
         .staticPriority = 1,
-        .desiredPeriodUs = 60000000, },//60sec
+        .desiredPeriodUs = 2000000, }, //60sec
     [TASK_SYSTEM] = {
         .taskName = "TASK_SYSTEM",
         .taskFunc = taskSystem,
@@ -253,7 +259,7 @@ int main(int argc, char *argv[]) {
 
     blackBoxFile = fopen(BLACKBOX_LOGFILE_NAME, "a+");
     if (blackBoxFile == NULL) {
-        fprintf(stderr, "[FLASH] failed to create '%s'\n", BLACKBOX_LOGFILE_NAME);
+        fprintf(stderr, "[BLACKBOX] failed to create '%s'\n", BLACKBOX_LOGFILE_NAME);
         return 1;
     }
     schedulerInit();

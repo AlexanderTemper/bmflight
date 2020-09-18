@@ -33,6 +33,8 @@ CSRCS += \
 	src/common/streambuf.c        \
 	src/common/time.c             \
 	src/common/maths.c            \
+	src/common/sprintf.c          \
+	src/common/typeconversion.c   \
 	src/eeprom/eeprom_emulation.c \
 	src/fc/tasks.c                \
 	src/fc/rateController.c       \

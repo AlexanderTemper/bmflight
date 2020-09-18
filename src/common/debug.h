@@ -6,18 +6,6 @@
 #define MSP_DEBUG_ACC_DATA
 //#define MSP_DEBUG_GYRO_AVG
 
-
-typedef struct rate_controller_debug_data_s {
-    float error[XYZ_AXIS_COUNT];
-    float errorSum[XYZ_AXIS_COUNT];
-    float previousError[XYZ_AXIS_COUNT];
-    int16_t deltaError[XYZ_AXIS_COUNT];
-    int16_t mixer_command[XYZ_AXIS_COUNT];
-} rate_controller_debug_data_t;
-
-extern rate_controller_debug_data_t rate_controller_debug_data;
-
-
 typedef struct msp_debug_data_s {
     uint16_t data[4];
 } msp_debug_data_t;

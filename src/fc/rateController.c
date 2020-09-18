@@ -1,8 +1,7 @@
 #include "fc/rateController.h"
 #include "common/maths.h"
 #include "common/debug.h"
-
-#define DEBUG_RATE_PID
+#include "fc/fc.h"
 
 // 125000 -> on max error (+-500) we would need 500ms to set back to zero
 #define I_WIND_UP_MAX 125000.0f
@@ -50,14 +49,26 @@ void updateRateController(control_t* fcControl, gyroDev_t *gyro, pid_config_t *p
     deltaError[Y] = error[Y] - previousError[Y];
     deltaError[Z] = error[Z] - previousError[Z];
 
-    int16_t x = error[X] * pidConfig->Kp[X] + errorSum[X] * pidConfig->Ki[X] + deltaError[X] * pidConfig->Kd[X];
-    int16_t y = error[Y] * pidConfig->Kp[Y] + errorSum[Y] * pidConfig->Ki[Y] + deltaError[Y] * pidConfig->Kd[Y];
-    int16_t z = error[Z] * pidConfig->Kp[Z] + errorSum[Z] * pidConfig->Ki[Z] + deltaError[Z] * pidConfig->Kd[Z];
+    int16_t pX = error[X] * pidConfig->Kp[X];
+    int16_t pY = error[Y] * pidConfig->Kp[Y];
+    int16_t pZ = error[Z] * pidConfig->Kp[Z];
+
+    int16_t iX = errorSum[X] * pidConfig->Ki[X];
+    int16_t iY = errorSum[Y] * pidConfig->Ki[Y];
+    int16_t iZ = errorSum[Z] * pidConfig->Ki[Z];
+
+    int16_t dX = deltaError[X] * pidConfig->Kd[X];
+    int16_t dY = deltaError[Y] * pidConfig->Kd[Y];
+    int16_t dZ = deltaError[Z] * pidConfig->Kd[Z];
+
+    int16_t sumX = pX + iX + dX;
+    int16_t sumY = pY + iY + dY;
+    int16_t sumZ = pZ + iZ + dZ;
 
     // set new PID Value
-    fcControl->mixer_command.axis[X] = constrain(x, -500, +500);
-    fcControl->mixer_command.axis[Y] = constrain(y, -500, +500);
-    fcControl->mixer_command.axis[Z] = constrain(z, -500, +500);
+    fcControl->mixer_command.axis[X] = constrain(sumX, -500, +500);
+    fcControl->mixer_command.axis[Y] = constrain(sumY, -500, +500);
+    fcControl->mixer_command.axis[Z] = constrain(sumZ, -500, +500);
 
     // save error
     previousError[X] = error[X];
@@ -68,22 +79,19 @@ void updateRateController(control_t* fcControl, gyroDev_t *gyro, pid_config_t *p
     //int16_t absYaw =  ABS(fcControl->rate_command.axis[Z]);
     //fcControl->mixer_command.axis[YAW] = constrain(fcControl->mixer_command.axis[YAW], -100 - absYaw, +100 + absYaw);
 
-#ifdef DEBUG_RATE_PID
-    rate_controller_debug_data.error[X] = error[X];
-    rate_controller_debug_data.error[Y] = error[Y];
-    rate_controller_debug_data.error[Z] = error[Z];
+#ifdef USE_BLACKBOX
+    pid_debug_t* pidDebug = &getFcDebug()->pid_debug;
+    pidDebug->p[X] = pX;
+    pidDebug->p[Y] = pY;
+    pidDebug->p[Z] = pZ;
 
-    rate_controller_debug_data.errorSum[X] = errorSum[X];
-    rate_controller_debug_data.errorSum[Y] = errorSum[Y];
-    rate_controller_debug_data.errorSum[Z] = errorSum[Z];
+    pidDebug->i[X] = iX;
+    pidDebug->i[Y] = iY;
+    pidDebug->i[Z] = iZ;
 
-    rate_controller_debug_data.deltaError[X] = deltaError[X];
-    rate_controller_debug_data.deltaError[Y] = deltaError[Y];
-    rate_controller_debug_data.deltaError[Z] = deltaError[Z];
-
-    rate_controller_debug_data.mixer_command[X] = fcControl->mixer_command.axis[X];
-    rate_controller_debug_data.mixer_command[Y] = fcControl->mixer_command.axis[Y];
-    rate_controller_debug_data.mixer_command[Z] = fcControl->mixer_command.axis[Z];
+    pidDebug->d[X] = dX;
+    pidDebug->d[Y] = dY;
+    pidDebug->d[Z] = dZ;
 #endif
     //printf("%d: in[%d,%d,%d] out[%d,%d,%d]\n", currentTime, rateCommand->axis[ROLL], rateCommand->axis[PITCH], rateCommand->axis[YAW], mixerCommand->axis[ROLL], mixerCommand->axis[PITCH], mixerCommand->axis[YAW]);
 }

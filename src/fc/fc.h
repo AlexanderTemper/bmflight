@@ -95,7 +95,7 @@ typedef struct attitude_command_s {
 
 typedef struct control_s {
     rx_command_t rx;                     //raw data form rx
-    command_t fc_command;                //processed data from rx // range
+    command_t fc_command;                //processed data from rx
 
     attitude_command_t attitude_command; //data provided to attitude controller
     rate_command_t rate_command;         //data provided to rate controller
@@ -106,6 +106,22 @@ typedef struct control_s {
 extern config_t fc_config;
 extern status_t fc_status;
 extern control_t fc_control;
+
+typedef struct pid_debug_s {
+    int16_t p[XYZ_AXIS_COUNT];
+    int16_t i[XYZ_AXIS_COUNT];
+    int16_t d[XYZ_AXIS_COUNT];
+} pid_debug_t;
+
+typedef struct fc_debug_s {
+    pid_debug_t pid_debug;
+} fc_debug_t;
+
+extern fc_debug_t fc_debug;
+
+static inline fc_debug_t* getFcDebug(void) {
+    return &fc_debug;
+}
 
 static inline config_t* getFcConfig(void) {
     return &fc_config;

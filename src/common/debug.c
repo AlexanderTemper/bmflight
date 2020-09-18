@@ -4,7 +4,6 @@
 
 #include "common/debug.h"
 
-rate_controller_debug_data_t rate_controller_debug_data;
 msp_debug_data_t msp_debug_data;
 
 // local function pointer to debug interface

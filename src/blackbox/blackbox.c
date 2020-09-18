@@ -24,12 +24,15 @@
 #include <math.h>
 
 #include "global.h"
-
+#include "stdarg.h"
+#include "stdio.h"
 #ifdef USE_BLACKBOX
 
 #include "blackbox/blackbox.h"
 #include "msp/msp.h"
+#include "fc/fc.h"
 #include "common/streambuf.h"
+#include "common/sprintf.h"
 
 #define DEFAULT_BLACKBOX_DEVICE  BLACKBOX_DEVICE_NONE
 // number of flight loop iterations before logging I-frame
@@ -37,6 +40,11 @@ static int16_t blackboxIInterval = 0;
 //number of flight loop iterations before logging P-frame
 static int16_t blackboxPInterval = 0;
 static int32_t blackboxSInterval = 0;
+
+static uint32_t blackboxIteration;
+static uint16_t blackboxLoopIndex;
+static uint16_t blackboxPFrameIndex;
+static uint16_t blackboxIFrameIndex;
 
 blackboxConfig_t blackboxConfig_System = {
     .p_ratio = 16,
@@ -58,10 +66,11 @@ typedef enum BlackboxState {
     BLACKBOX_STATE_SEND_START,
     BLACKBOX_STATE_SEND_HEADER,
     BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_NAMES,
+    BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_SIGNED,
     BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_PREDICTOR,
     BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_ENCODING,
-    BLACKBOX_STATE_SEND_SLOW_HEADER,
-    BLACKBOX_STATE_SEND_SYSINFO,
+    BLACKBOX_STATE_SEND_EXTRA_HEADERS,
+    BLACKBOX_STATE_SEND_LOG,
     BLACKBOX_STATE_SHUTTING_DOWN,
 } BlackboxState;
 
@@ -104,29 +113,196 @@ static void blackboxWriteSignedVB(int32_t value) {
     //ZigZag encode to make the value always positive
     blackboxWriteUnsignedVB(zigzagEncode(value));
 }
-int dummy = -1000;
-static uint32_t loopIteration = 0;
-static void writeSysInfo(void) {
-    sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES]);
-    blackboxWriteUnsignedVB('I'); //Todo p frames
 
-    blackboxWriteUnsignedVB(loopIteration++);
+static void blackboxWriteString(const char *s) {
+    const uint8_t *pos = (uint8_t*) s;
+    while (*pos) {
+        blackboxWrite(*pos);
+        pos++;
+    }
+}
+
+static void _putc(void *p, char c) {
+    (void) p;
+    blackboxWrite(c);
+}
+
+static void blackboxPrintfv(const char *fmt, va_list va) {
+    tfp_format(NULL, _putc, fmt, va);
+}
+
+/**
+ * Cast the in-memory representation of the given float directly to an int.
+ *
+ * This is useful for printing the hex representation of a float number (which is considerably cheaper
+ * than a full decimal float formatter, in both code size and output length).
+ */
+static uint32_t castFloatBytesToInt(float f) {
+    union floatConvert_t {
+        float f;
+        uint32_t u;
+    } floatConvert;
+
+    floatConvert.f = f;
+
+    return floatConvert.u;
+}
+/*
+ * printf a Blackbox header line with a leading "H " and trailing "\n" added automatically.
+ */
+static void blackboxPrintfHeaderLine(const char *name, const char *fmt, ...) {
+    va_list va;
+
+    blackboxWrite('H');
+    blackboxWrite(' ');
+    blackboxWriteString(name);
+    blackboxWrite(':');
+
+    va_start(va, fmt);
+
+    blackboxPrintfv(fmt, va);
+
+    va_end(va);
+
+    blackboxWrite('\n');
+}
+
+static void blackboxResetIterationTimers(void) {
+    blackboxIteration = 0;
+    blackboxLoopIndex = 0;
+    blackboxIFrameIndex = 0;
+    blackboxPFrameIndex = 0;
+}
+// Called once every FC loop in order to keep track of how many FC loop iterations have passed
+static void blackboxAdvanceIterationTimers(void) {
+    ++blackboxIteration;
+
+    if (++blackboxLoopIndex >= blackboxIInterval) {
+        blackboxLoopIndex = 0;
+        blackboxIFrameIndex++;
+        blackboxPFrameIndex = 0;
+    } else if (++blackboxPFrameIndex >= blackboxPInterval) {
+        blackboxPFrameIndex = 0;
+    }
+}
+static bool blackboxShouldLogPFrame(void) {
+    return blackboxPFrameIndex == 0 && blackboxConfig()->p_ratio != 0;
+}
+
+static bool blackboxShouldLogIFrame(void) {
+    return blackboxLoopIndex == 0;
+}
+
+//static const uint8_t headerName[] = "H Field I name:loopIteration,time,"
+//        "axisP[0],axisP[1],axisP[2],"
+//        "axisI[0],axisI[1],axisI[2],"
+//        "axisD[0],axisD[1],axisD[2],"
+//        "rcCommand[0],rcCommand[1],rcCommand[2],rcCommand[3]\n";
+static void writeIFrame(void) {
+
+    sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES]);
+    blackboxWriteUnsignedVB('I');
+
+    blackboxWriteUnsignedVB(blackboxIteration);
     blackboxWriteUnsignedVB(micros());
-    blackboxWriteSignedVB(dummy);
-    blackboxWriteSignedVB(0);
-    blackboxWriteSignedVB(0);
+
+    pid_debug_t* pidDebug = &getFcDebug()->pid_debug;
+    // axisP
+    blackboxWriteSignedVB(pidDebug->p[X]);
+    blackboxWriteSignedVB(pidDebug->p[Y]);
+    blackboxWriteSignedVB(pidDebug->p[Z]);
+    // axisI
+    blackboxWriteSignedVB(pidDebug->i[X]);
+    blackboxWriteSignedVB(pidDebug->i[Y]);
+    blackboxWriteSignedVB(pidDebug->i[Z]);
+    // axisD
+    blackboxWriteSignedVB(pidDebug->d[X]);
+    blackboxWriteSignedVB(pidDebug->d[Y]);
+    blackboxWriteSignedVB(pidDebug->d[Z]);
+    // rcCommand
+    command_t * fcCommand = &getFcControl()->fc_command;
+    blackboxWriteSignedVB(fcCommand->roll);
+    blackboxWriteSignedVB(fcCommand->pitch);
+    blackboxWriteSignedVB(fcCommand->yaw);
+    blackboxWriteSignedVB(fcCommand->throttle);
 
     sbufSwitchToReader(&logBuffer, &logLineData[0]);
+    printf("------------logIframe %d l = %d   ", blackboxIteration, sbufBytesRemaining(&logBuffer));
     mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
-    dummy++;
 }
-static const uint8_t blackboxHeader[] = "H Product:Blackbox flight data recorder by Nicholas Sherlock\nH Data version:2\n";
-static const uint8_t headerName[] = "H Field I name:loopIteration,time,axisP[0],axisP[1],axisP[2]\n";
-static const uint8_t headerPredictor[] = "H Field I predictor:0,0,0,0,0\n";
-static const uint8_t headerEncoding[] = "H Field I encoding:1,1,0,0,0\n";
 
-static const uint8_t pHeaderPredictor[] = "H Field P predictor:6,2,1,1,1\n";
-static const uint8_t pHheaderEncoding[] = "H Field P encoding:9,0,0,0,0\n";
+static void writePFrame(void) {
+    sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES]);
+    blackboxWriteUnsignedVB('P');
+
+    sbufSwitchToReader(&logBuffer, &logLineData[0]);
+    printf("logPframe %d l = %d   ", blackboxIteration, sbufBytesRemaining(&logBuffer));
+    mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
+}
+
+// Called once every FC loop in order to log the current state
+static void blackboxLogIteration(timeUs_t currentTimeUs) {
+    if (blackboxShouldLogIFrame()) {
+        writeIFrame();
+    } else {
+        if (blackboxShouldLogPFrame()) {
+            //writePFrame();
+        }
+    }
+}
+
+static const uint8_t blackboxHeader[] = "H Product:Blackbox flight data recorder by Nicholas Sherlock\nH Data version:2\n";
+static const uint8_t headerName[] = "H Field I name:loopIteration,time,"
+        "axisP[0],axisP[1],axisP[2],"
+        "axisI[0],axisI[1],axisI[2],"
+        "axisD[0],axisD[1],axisD[2],"
+        "rcCommand[0],rcCommand[1],rcCommand[2],rcCommand[3]\n";
+
+//1 = signed
+//0 = unsigned
+static const uint8_t headerSigned[] = "H Field I signed:0,0"
+        "1,1,1,"
+        "1,1,1,"
+        "1,1,1,"
+        "1,1,1,0"
+        "\n";
+//0 = Predict zero
+//1 = Predict last value
+static const uint8_t headerPredictor[] = "H Field I predictor:0,0,"
+        "0,0,0,"
+        "0,0,0,"
+        "0,0,0,"
+        "0,0,0,0"
+        "\n";
+
+//0 = signed
+//1 = unsigned
+static const uint8_t headerEncoding[] = "H Field I encoding:1,1,"
+        "0,0,0,"
+        "0,0,0,"
+        "0,0,0,"
+        "0,0,0,1"
+        "\n";
+
+//0 = Predict zero
+//1 = Predict last value
+static const uint8_t pHeaderPredictor[] = "H Field P predictor:6,2,"
+        "1,1,1,"
+        "1,1,1,"
+        "1,1,1,"
+        "1,1,1,1"
+        "\n";
+//0 = signed
+//1 = unsigned
+//7 = TAG2_3S32
+//9 = NULL
+static const uint8_t pHheaderEncoding[] = "H Field P encoding:9,0,"
+        "0,0,0,"
+        "0,0,0,"
+        "0,0,0,"
+        "0,0,0,1"
+        "\n";
+
 void blackboxStart(void) {
     if (blackboxState == BLACKBOX_STATE_STOPPED) {
         blackboxState = BLACKBOX_STATE_SEND_START;
@@ -137,6 +313,7 @@ void blackboxStop(void) {
         blackboxState = BLACKBOX_STATE_SHUTTING_DOWN;
     }
 }
+
 void blackboxUpdate(timeUs_t currentTimeUs) {
     switch (blackboxState) {
     case BLACKBOX_STATE_STOPPED:
@@ -149,17 +326,23 @@ void blackboxUpdate(timeUs_t currentTimeUs) {
         break;
 
     case BLACKBOX_STATE_SEND_HEADER: {
+        //reset log Buffer
+        sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES]);
         //I and P definition
-        const uint8_t iInterval[] = "H I interval: 16\n"; //todo use blackboxIInterval
-        mspWriteBlackBoxData(iInterval, sizeof(iInterval));
-        const uint8_t pInterval[] = "H P interval: 1/16\n"; //todo use blackboxPInterval (currently no P frame)
-        mspWriteBlackBoxData(pInterval, sizeof(pInterval));
+        blackboxPrintfHeaderLine("I interval", "%d", blackboxIInterval);
+        blackboxPrintfHeaderLine("P interval", "%s", "1/16");
+        sbufSwitchToReader(&logBuffer, &logLineData[0]);
+        mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
         blackboxState = BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_NAMES;
     }
         break;
 
     case BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_NAMES:
         mspWriteBlackBoxData(headerName, sizeof(headerName));
+        blackboxState = BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_SIGNED;
+        break;
+    case BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_SIGNED:
+        mspWriteBlackBoxData(headerSigned, sizeof(headerSigned));
         blackboxState = BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_PREDICTOR;
         break;
 
@@ -172,11 +355,22 @@ void blackboxUpdate(timeUs_t currentTimeUs) {
     case BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_ENCODING:
         mspWriteBlackBoxData(headerEncoding, sizeof(headerEncoding));
         mspWriteBlackBoxData(pHheaderEncoding, sizeof(pHheaderEncoding));
-        blackboxState = BLACKBOX_STATE_SEND_SYSINFO;
+        blackboxState = BLACKBOX_STATE_SEND_EXTRA_HEADERS;
         break;
-
-    case BLACKBOX_STATE_SEND_SYSINFO:
-        writeSysInfo();
+    case BLACKBOX_STATE_SEND_EXTRA_HEADERS: {
+        //reset log Buffer
+        sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES]);
+        blackboxPrintfHeaderLine("minthrottle", "%d", getFcConfig()->MINTHROTTLE);
+        blackboxPrintfHeaderLine("maxthrottle", "%d", getFcConfig()->MAXTHROTTLE);
+        //blackboxPrintfHeaderLine("gyro_scale", "0x%x", castFloatBytesToInt(1.0f));
+        sbufSwitchToReader(&logBuffer, &logLineData[0]);
+        mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
+        blackboxState = BLACKBOX_STATE_SEND_LOG;
+        break;
+    }
+    case BLACKBOX_STATE_SEND_LOG:
+        blackboxLogIteration(currentTimeUs);
+        blackboxAdvanceIterationTimers();
         break;
 
     case BLACKBOX_STATE_SHUTTING_DOWN: {
@@ -205,11 +399,10 @@ void blackboxUpdate(timeUs_t currentTimeUs) {
  * Call during system startup to initialize the blackbox.
  */
 void blackboxInit(bool enabled) {
+    blackboxResetIterationTimers();
     if (enabled) {
         blackboxConfig_System.device = BLACKBOX_DEVICE_SERIAL;
     }
-    //blackboxResetIterationTimers();
-
     // an I-frame is written every 32ms
     // blackboxUpdate() is run in synchronisation with the PID loop
     blackboxIInterval = (uint16_t) ((32 * TARGET_LOOP_HZ) / 1000);

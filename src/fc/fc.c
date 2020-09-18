@@ -11,6 +11,7 @@
 config_t fc_config;
 status_t fc_status;
 control_t fc_control;
+fc_debug_t fc_debug;
 
 static config_t default_fc_config = {
     .MINTHROTTLE = 1020,
