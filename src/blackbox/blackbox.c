@@ -31,8 +31,10 @@
 #include "blackbox/blackbox.h"
 #include "msp/msp.h"
 #include "fc/fc.h"
+#include "sensor/sensor.h"
 #include "common/streambuf.h"
 #include "common/sprintf.h"
+#include "common/maths.h"
 
 #define DEFAULT_BLACKBOX_DEVICE  BLACKBOX_DEVICE_NONE
 // number of flight loop iterations before logging I-frame
@@ -219,15 +221,29 @@ static void writeIFrame(void) {
     blackboxWriteSignedVB(pidDebug->d[X]);
     blackboxWriteSignedVB(pidDebug->d[Y]);
     blackboxWriteSignedVB(pidDebug->d[Z]);
+
+    // gyroADC
+    gyroDev_t* gyro = &getSonsors()->gyro;
+    blackboxWriteSignedVB(gyro->raw[X]);
+    blackboxWriteSignedVB(gyro->raw[Y]);
+    blackboxWriteSignedVB(gyro->raw[Z]);
+
     // rcCommand
     command_t * fcCommand = &getFcControl()->fc_command;
     blackboxWriteSignedVB(fcCommand->roll);
     blackboxWriteSignedVB(fcCommand->pitch);
     blackboxWriteSignedVB(fcCommand->yaw);
-    blackboxWriteSignedVB(fcCommand->throttle);
+    blackboxWriteUnsignedVB(fcCommand->throttle);
+
+    // motor
+    motors_command_t * motorCommand = &getFcControl()->motor_command;
+    blackboxWriteUnsignedVB(motorCommand->value[0] - getFcConfig()->MINTHROTTLE);
+    blackboxWriteSignedVB(motorCommand->value[1] - motorCommand->value[0]);
+    blackboxWriteSignedVB(motorCommand->value[2] - motorCommand->value[0]);
+    blackboxWriteSignedVB(motorCommand->value[3] - motorCommand->value[0]);
 
     sbufSwitchToReader(&logBuffer, &logLineData[0]);
-    printf("------------logIframe %d l = %d   ", blackboxIteration, sbufBytesRemaining(&logBuffer));
+    printf("\n------------logIframe %d l = %d   ", blackboxIteration, sbufBytesRemaining(&logBuffer));
     mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
 }
 
@@ -252,55 +268,70 @@ static void blackboxLogIteration(timeUs_t currentTimeUs) {
 }
 
 static const uint8_t blackboxHeader[] = "H Product:Blackbox flight data recorder by Nicholas Sherlock\nH Data version:2\n";
-static const uint8_t headerName[] = "H Field I name:loopIteration,time,"
-        "axisP[0],axisP[1],axisP[2],"
-        "axisI[0],axisI[1],axisI[2],"
-        "axisD[0],axisD[1],axisD[2],"
-        "rcCommand[0],rcCommand[1],rcCommand[2],rcCommand[3]\n";
-
+static const uint8_t headerName[] = "H Field I name:loopIteration,time"
+        ",axisP[0],axisP[1],axisP[2]"
+        ",axisI[0],axisI[1],axisI[2]"
+        ",axisD[0],axisD[1],axisD[2]"
+        ",gyroADC[0],gyroADC[1],gyroADC[2]"
+        ",rcCommand[0],rcCommand[1],rcCommand[2],rcCommand[3]"
+        ",motor[0],motor[1],motor[2],motor[3]"
+        "\n";
 //1 = signed
 //0 = unsigned
 static const uint8_t headerSigned[] = "H Field I signed:0,0"
-        "1,1,1,"
-        "1,1,1,"
-        "1,1,1,"
-        "1,1,1,0"
+        ",1,1,1" //p
+        ",1,1,1"//i
+        ",1,1,1"//d
+        ",1,1,1"//gyroADC
+        ",1,1,1,0"//rcCommand
+        ",0,0,0,0"//motor
         "\n";
 //0 = Predict zero
 //1 = Predict last value
-static const uint8_t headerPredictor[] = "H Field I predictor:0,0,"
-        "0,0,0,"
-        "0,0,0,"
-        "0,0,0,"
-        "0,0,0,0"
+//5 = Predict motor[0]
+//11 = MINMOTOR
+static const uint8_t headerPredictor[] = "H Field I predictor:0,0"
+        ",0,0,0" //p
+        ",0,0,0"//i
+        ",0,0,0"//d
+        ",0,0,0"//gyroADC
+        ",0,0,0,0"//rcCommand
+        ",11,5,5,5"//motor
         "\n";
 
 //0 = signed
 //1 = unsigned
-static const uint8_t headerEncoding[] = "H Field I encoding:1,1,"
-        "0,0,0,"
-        "0,0,0,"
-        "0,0,0,"
-        "0,0,0,1"
+static const uint8_t headerEncoding[] = "H Field I encoding:1,1"
+        ",0,0,0" //p
+        ",0,0,0"//i
+        ",0,0,0"//d
+        ",0,0,0"//gyroADC
+        ",0,0,0,1"//rcCommand
+        ",1,0,0,0"//motor
         "\n";
 
 //0 = Predict zero
 //1 = Predict last value
-static const uint8_t pHeaderPredictor[] = "H Field P predictor:6,2,"
-        "1,1,1,"
-        "1,1,1,"
-        "1,1,1,"
-        "1,1,1,1"
+//3 = Predict average 2
+static const uint8_t pHeaderPredictor[] = "H Field P predictor:6,2"
+        ",1,1,1" //p
+        ",1,1,1"//i
+        ",1,1,1"//d
+        ",3,3,3"//gyroADC
+        ",1,1,1,1"//rcCommand
+        ",3,3,3,3"//motor
         "\n";
 //0 = signed
 //1 = unsigned
 //7 = TAG2_3S32
 //9 = NULL
-static const uint8_t pHheaderEncoding[] = "H Field P encoding:9,0,"
-        "0,0,0,"
-        "0,0,0,"
-        "0,0,0,"
-        "0,0,0,1"
+static const uint8_t pHheaderEncoding[] = "H Field P encoding:9,0"
+        ",0,0,0" //p
+        ",0,0,0"//i
+        ",0,0,0"//d
+        ",0,0,0"//gyroADC
+        ",0,0,0,1"//rcCommand
+        ",1,1,1,1"//motor
         "\n";
 
 void blackboxStart(void) {
@@ -317,6 +348,9 @@ void blackboxStop(void) {
 void blackboxUpdate(timeUs_t currentTimeUs) {
     switch (blackboxState) {
     case BLACKBOX_STATE_STOPPED:
+        if (getFcStatus()->ARMED) {
+            blackboxState = BLACKBOX_STATE_SEND_START;
+        }
         break;
     case BLACKBOX_STATE_SEND_START:
         //if (ARMING_FLAG(ARMED)) {
@@ -358,17 +392,22 @@ void blackboxUpdate(timeUs_t currentTimeUs) {
         blackboxState = BLACKBOX_STATE_SEND_EXTRA_HEADERS;
         break;
     case BLACKBOX_STATE_SEND_EXTRA_HEADERS: {
+        gyroDev_t* gyro = &getSonsors()->gyro;
         //reset log Buffer
         sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES]);
         blackboxPrintfHeaderLine("minthrottle", "%d", getFcConfig()->MINTHROTTLE);
         blackboxPrintfHeaderLine("maxthrottle", "%d", getFcConfig()->MAXTHROTTLE);
-        //blackboxPrintfHeaderLine("gyro_scale", "0x%x", castFloatBytesToInt(1.0f));
+        blackboxPrintfHeaderLine("gyro_scale", "0x%x", castFloatBytesToInt(gyro->scale * (M_PIf / 180) * 0.000001));
         sbufSwitchToReader(&logBuffer, &logLineData[0]);
         mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
         blackboxState = BLACKBOX_STATE_SEND_LOG;
         break;
     }
     case BLACKBOX_STATE_SEND_LOG:
+        if (!getFcStatus()->ARMED) {
+            blackboxState = BLACKBOX_STATE_SHUTTING_DOWN;
+            return;
+        }
         blackboxLogIteration(currentTimeUs);
         blackboxAdvanceIterationTimers();
         break;

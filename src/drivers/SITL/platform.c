@@ -227,9 +227,11 @@ static bool gyro_simRead(gyroDev_t *gyro) {
 
     pthread_mutex_lock(&udpLock);
 
+
     gyro->raw[X] = lastSimPkt.imu_angular_velocity_rpy[X];
     gyro->raw[Y] = lastSimPkt.imu_angular_velocity_rpy[Y];
     gyro->raw[Z] = lastSimPkt.imu_angular_velocity_rpy[Z];
+
     gyro->lastReadTime = lastSimPkt.timestamp * 1000000;
 
     pthread_mutex_unlock(&udpLock);

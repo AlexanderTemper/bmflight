@@ -5,8 +5,6 @@
 #include "imu/imu.h"
 
 int main(void) {
-
-
     platform_initialize();
     serial_initialize();
     msp_initialize();
@@ -19,14 +17,6 @@ int main(void) {
 
     tasksInit();
 
-    // led inti
-
-//
-//    port_pin_set_output_level(LED_ROT, true);
-//
-//    //
-//            processMSP();
-//            printDebug("hallo");
     /************************** Infinite Loop *******************************/
     while (true) {
         scheduler();

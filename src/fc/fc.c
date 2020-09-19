@@ -27,16 +27,16 @@ static config_t default_fc_config = {
     .rate_controller_config = {
         .Kp = {
             0.1f,
-            0.2f,
-            0.3f },
+            0.1f,
+            0.1f },
         .Ki = {
-            0.01f,
-            0.02f,
-            0.03f },
+            0.00f,
+            0.00f,
+            0.00f },
         .Kd = {
-            0.04f,
-            0.05f,
-            0.06f } },
+            0.00f,
+            0.00f,
+            0.00f } },
     .levelGain = 0.0f,
     .deciLevelAngleLimit = 150,
     .ACC_TRIM = {

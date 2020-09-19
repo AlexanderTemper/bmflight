@@ -73,5 +73,5 @@ void readJoy(void) {
         /* Ignore init events. */
         break;
     }
-    printf("roll %6d, pitch %6d, yaw %6d, thrust %6d, arm %d \n", rx_joy.roll, rx_joy.pitch, rx_joy.yaw, rx_joy.throttle, rx_joy.arm);
+    //printf("roll %6d, pitch %6d, yaw %6d, thrust %6d, arm %d \n", rx_joy.roll, rx_joy.pitch, rx_joy.yaw, rx_joy.throttle, rx_joy.arm);
 }
