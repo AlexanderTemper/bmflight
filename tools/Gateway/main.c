@@ -158,6 +158,8 @@ static void taskJoy(timeUs_t currentTimeUs) {
     sbufWriteU16(&buf, rx_joy.arm);
     sbufWriteU16(&buf, 5);
 
+    printf("roll %6d, pitch %6d, yaw %6d, thrust %6d, arm %d \n", rx_joy.roll, rx_joy.pitch, rx_joy.yaw, rx_joy.throttle, rx_joy.arm);
+
     mspSerialPush(&mspPort, MSP_SET_RAW_RC, &data[0], 12, MSP_DIRECTION_REQUEST);
 }
 

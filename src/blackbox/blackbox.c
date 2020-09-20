@@ -25,7 +25,7 @@
 
 #include "global.h"
 #include "stdarg.h"
-#include "stdio.h"
+//#include "stdio.h"
 #ifdef USE_BLACKBOX
 
 #include "blackbox/blackbox.h"
@@ -243,7 +243,7 @@ static void writeIFrame(void) {
     blackboxWriteSignedVB(motorCommand->value[3] - motorCommand->value[0]);
 
     sbufSwitchToReader(&logBuffer, &logLineData[0]);
-    printf("\n------------logIframe %d l = %d   ", blackboxIteration, sbufBytesRemaining(&logBuffer));
+    //printf("\n------------logIframe %d l = %d   ", blackboxIteration, sbufBytesRemaining(&logBuffer));
     mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
 }
 
@@ -252,7 +252,7 @@ static void writePFrame(void) {
     blackboxWriteUnsignedVB('P');
 
     sbufSwitchToReader(&logBuffer, &logLineData[0]);
-    printf("logPframe %d l = %d   ", blackboxIteration, sbufBytesRemaining(&logBuffer));
+    //printf("logPframe %d l = %d   ", blackboxIteration, sbufBytesRemaining(&logBuffer));
     mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
 }
 

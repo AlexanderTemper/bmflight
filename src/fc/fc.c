@@ -44,7 +44,7 @@ static config_t default_fc_config = {
         -19,
         42 },
     .CONFIG_VERSION = EEPROM_CONF_VERSION,
-    .blackboxEnabled = false,
+    .blackboxEnabled = true,
     .PILOTNAME = {
         'T',
         'e',

@@ -31,7 +31,7 @@ int initJoy(const char* name) {
     rx_joy.pitch = 1500;
     rx_joy.yaw = 1500;
     rx_joy.throttle = 1000;
-    joyDev = open(name, O_RDONLY|O_NONBLOCK);
+    joyDev = open(name, O_RDONLY | O_NONBLOCK);
     return joyDev;
 }
 
@@ -49,16 +49,16 @@ void readJoy(void) {
     case JS_EVENT_AXIS:
         switch (event.number) {
         case 0:
-            rx_joy.yaw = (((float)event.value/32767)*500)+1500;
+            rx_joy.yaw = (((float) event.value / 32767) * 500) + 1500;
             break;
         case 1:
-            rx_joy.throttle = ((((float)-event.value/32767)+1)/2)*1000+1000;
+            rx_joy.throttle = ((((float) -event.value / 32767) + 1) / 2) * 1000 + 1000;
             break;
         case 3:
-            rx_joy.roll = (((float)event.value/32767)*500)+1500;
+            rx_joy.roll = (((float) event.value / 32767) * 500) + 1500;
             break;
         case 4:
-            rx_joy.pitch = (((float)-event.value/32767)*500)+1500;
+            rx_joy.pitch = (((float) -event.value / 32767) * 500) + 1500;
             break;
         default:
             /* Ignore init events. */
@@ -73,5 +73,4 @@ void readJoy(void) {
         /* Ignore init events. */
         break;
     }
-    //printf("roll %6d, pitch %6d, yaw %6d, thrust %6d, arm %d \n", rx_joy.roll, rx_joy.pitch, rx_joy.yaw, rx_joy.throttle, rx_joy.arm);
 }
