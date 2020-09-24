@@ -76,6 +76,7 @@ static mspResult_e mspFcProcessCommand(mspPacket_t *cmd, mspPacket_t *reply) {
     return MSP_RESULT_CMD_UNKNOWN;
 }
 
+static int logCounter = 0;
 /**
  * @param cmd
  * @param reply
@@ -106,13 +107,13 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
     }
     case MSP_BLACKBOX_DATA: {
         fwrite(src->ptr, 1, sbufBytesRemaining(src), blackBoxFile);
+        logCounter++;
+        //printf("%d\n", logCounter);
         fclose(blackBoxFile);
         blackBoxFile = fopen(BLACKBOX_LOGFILE_NAME, "a+");
         if (blackBoxFile == NULL) {
             fprintf(stderr, "[BLACKBOX] failed to create '%s'\n", BLACKBOX_LOGFILE_NAME);
         }
-        //fwrite(src->ptr, 1, sbufBytesRemaining(src), stdout);
-        //printf(" , ");
         break;
     }
     case MSP_RAW_IMU: {
@@ -172,7 +173,7 @@ static void taskJoy(timeUs_t currentTimeUs) {
     sbufWriteU16(&buf, 10);  // Todo wenn hier 5 gehts ned was macht liux da
 
     sbufSwitchToReader(&buf, &data[0]);
-    printf("roll %6d, pitch %6d, yaw %6d, thrust %6d, arm %d \n", rx_joy.roll, rx_joy.pitch, rx_joy.yaw, rx_joy.throttle, rx_joy.arm);
+    //printf("roll %6d, pitch %6d, yaw %6d, thrust %6d, arm %d \n", rx_joy.roll, rx_joy.pitch, rx_joy.yaw, rx_joy.throttle, rx_joy.arm);
     mspSerialPush(&mspPort, MSP_SET_RAW_RC, data, sbufBytesRemaining(&buf), MSP_DIRECTION_REQUEST);
 }
 
@@ -182,6 +183,7 @@ static void taskSystem(timeUs_t currentTimeUs) {
 
 static void taskLogger(timeUs_t currentTimeUs) {
     armedFake = false;
+    printf("endLogging\n");
     //mspSerialPush(&mspPort, MSP_BLACKBOX_STOP, 0, 0, MSP_DIRECTION_REQUEST);
 }
 static void taskHandleSerial(timeUs_t currentTimeUs) {
@@ -196,7 +198,7 @@ static task_t tasks[TASK_COUNT] = {
         .taskName = "TASK_SERIAL",
         .taskFunc = taskHandleSerial,
         .staticPriority = 4,
-        .desiredPeriodUs = TASK_PERIOD_HZ(250), },
+        .desiredPeriodUs = TASK_PERIOD_HZ(10000), }, //Task needs to be run with high rate to be able process MSP_BLACKBOX_DATA in time
     [TASK_RX] = {
         .taskName = "TASK_RX",
         .taskFunc = taskJoy,

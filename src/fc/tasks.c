@@ -117,7 +117,7 @@ static void taskLoop(timeUs_t currentTimeUs) {
 
 }
 static void taskAttitude(timeUs_t currentTimeUs) {
-
+    sensors->acc.readFn(&sensors->acc);
 
     updateACC(currentTimeUs);
 
