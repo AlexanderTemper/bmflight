@@ -34,16 +34,19 @@ static uint8_t txBuffer[BUFFER_SIZE];
 //static void debugSerial(const uint8_t* data, uint16_t len) {
 //    serialWriteBuf(&serialInstance, data, len);
 //}
-
+int16_t accfake = -8192;
 static bool bma280Read(accDev_t *acc) {
 
     struct bma2x2_accel_data rawData;
     if (bma2x2_read_accel_xyz(&rawData) != 0) {
         return false;
     }
-    acc->ADCRaw[X] = rawData.x;
-    acc->ADCRaw[Y] = rawData.y;
-    acc->ADCRaw[Z] = rawData.z;
+//    acc->ADCRaw[X] = rawData.x;
+//    acc->ADCRaw[Y] = rawData.y;
+//    acc->ADCRaw[Z] = rawData.z;
+    acc->ADCRaw[X] = 8192;//lastSimPkt.imu_linear_acceleration_xyz[X];
+     acc->ADCRaw[Y] = accfake++;//lastSimPkt.imu_linear_acceleration_xyz[Y];
+     acc->ADCRaw[Z] = -8192;//lastSimPkt.imu_linear_acceleration_xyz[Z];
     acc->lastReadTime = micros();
     return true;
 }
@@ -57,15 +60,19 @@ static void accInit(void) {
     sensors.acc.readFn = bma280Read;
     sensors.acc.scale = 1.0f / 1024.0f;
 }
+int16_t fake = -32767;
 static bool bmg160Read(gyroDev_t *gyro) {
 
     struct bmg160_data_t rawData;
     if (bmg160_get_data_XYZ(&rawData) != 0) {
         return false;
     }
-    gyro->raw[X] = rawData.datax;
-    gyro->raw[Y] = rawData.datay;
-    gyro->raw[Z] = rawData.dataz;
+//    gyro->raw[X] = rawData.datax;
+//    gyro->raw[Y] = rawData.datay;
+//    gyro->raw[Z] = rawData.dataz;
+    gyro->raw[X] = 32767;//lastSimPkt.imu_angular_velocity_rpy[X];
+       gyro->raw[Y] = fake++;//lastSimPkt.imu_angular_velocity_rpy[Y];
+       gyro->raw[Z] = -32767;//lastSimPkt.imu_angular_velocity_rpy[Z];
     gyro->lastReadTime = micros();
 
     return true;

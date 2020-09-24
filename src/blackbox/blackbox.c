@@ -35,6 +35,7 @@
 #include "common/streambuf.h"
 #include "common/sprintf.h"
 #include "common/maths.h"
+#include "common/debug.h"
 
 #define DEFAULT_BLACKBOX_DEVICE  BLACKBOX_DEVICE_NONE
 // number of flight loop iterations before logging I-frame
@@ -77,6 +78,23 @@ typedef enum BlackboxState {
 } BlackboxState;
 
 static BlackboxState blackboxState;
+
+typedef struct blackboxMainState_s {
+    uint32_t time;
+    int32_t axisPID_P[XYZ_AXIS_COUNT];
+    int32_t axisPID_I[XYZ_AXIS_COUNT];
+    int32_t axisPID_D[XYZ_AXIS_COUNT];
+    int16_t rcCommand[4];
+    int16_t gyroADC[XYZ_AXIS_COUNT];
+    int16_t accADC[XYZ_AXIS_COUNT];
+    int16_t motor[4];
+} blackboxMainState_t;
+
+// Keep a history of length 2, plus a buffer for MW to store the new values into
+static blackboxMainState_t blackboxHistoryRing[3];
+
+// These point into blackboxHistoryRing, use them to know where to store history of a given age (0, 1 or 2 generations old)
+static blackboxMainState_t* blackboxHistory[3];
 
 #define LOG_LINE_MAX_BYTES 128
 //log buffer to wirte data
@@ -195,84 +213,143 @@ static bool blackboxShouldLogIFrame(void) {
     return blackboxLoopIndex == 0;
 }
 
+/**
+ * Fill the current state of the blackbox using values read from the flight controller
+ */
+static void loadMainState(timeUs_t currentTimeUs) {
+    blackboxMainState_t *blackboxCurrent = blackboxHistory[0];
+
+    blackboxCurrent->time = currentTimeUs;
+
+    gyroDev_t* gyro = &getSonsors()->gyro;
+    accDev_t* acc = &getSonsors()->acc;
+    pid_debug_t* pidDebug = &getFcDebug()->pid_debug;
+    command_t * fcCommand = &getFcControl()->fc_command;
+
+    for (int i = 0; i < XYZ_AXIS_COUNT; i++) {
+        blackboxCurrent->axisPID_P[i] = pidDebug->p[i];
+        blackboxCurrent->axisPID_I[i] = pidDebug->i[i];
+        blackboxCurrent->axisPID_D[i] = pidDebug->d[i];
+        blackboxCurrent->gyroADC[i] = gyro->raw[i];
+        blackboxCurrent->accADC[i] = acc->ADCRaw[i];
+    }
+
+    blackboxCurrent->rcCommand[ROLL] = fcCommand->roll;
+    blackboxCurrent->rcCommand[PITCH] = fcCommand->pitch;
+    blackboxCurrent->rcCommand[YAW] = fcCommand->yaw;
+    blackboxCurrent->rcCommand[THROTTLE] = fcCommand->throttle;
+
+    // motor
+    motors_command_t * motorCommand = &getFcControl()->motor_command;
+    for (int i = 0; i < 4; i++) {
+        blackboxCurrent->motor[i] = motorCommand->value[i];
+    }
+}
+
 //static const uint8_t headerName[] = "H Field I name:loopIteration,time,"
 //        "axisP[0],axisP[1],axisP[2],"
 //        "axisI[0],axisI[1],axisI[2],"
 //        "axisD[0],axisD[1],axisD[2],"
 //        "rcCommand[0],rcCommand[1],rcCommand[2],rcCommand[3]\n";
 static void writeIFrame(void) {
-
-    sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES]);
+    blackboxMainState_t *blackboxCurrent = blackboxHistory[0];
+    sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES - 1]);
     blackboxWriteUnsignedVB('I');
 
     blackboxWriteUnsignedVB(blackboxIteration);
-    blackboxWriteUnsignedVB(micros());
+    blackboxWriteUnsignedVB(blackboxCurrent->time);
 
-    pid_debug_t* pidDebug = &getFcDebug()->pid_debug;
     // axisP
-    blackboxWriteSignedVB(pidDebug->p[X]);
-    blackboxWriteSignedVB(pidDebug->p[Y]);
-    blackboxWriteSignedVB(pidDebug->p[Z]);
+    blackboxWriteSignedVB(blackboxCurrent->axisPID_P[X]);
+    blackboxWriteSignedVB(blackboxCurrent->axisPID_P[Y]);
+    blackboxWriteSignedVB(blackboxCurrent->axisPID_P[Z]);
     // axisI
-    blackboxWriteSignedVB(pidDebug->i[X]);
-    blackboxWriteSignedVB(pidDebug->i[Y]);
-    blackboxWriteSignedVB(pidDebug->i[Z]);
+    blackboxWriteSignedVB(blackboxCurrent->axisPID_I[X]);
+    blackboxWriteSignedVB(blackboxCurrent->axisPID_I[Y]);
+    blackboxWriteSignedVB(blackboxCurrent->axisPID_I[Z]);
     // axisD
-    blackboxWriteSignedVB(pidDebug->d[X]);
-    blackboxWriteSignedVB(pidDebug->d[Y]);
-    blackboxWriteSignedVB(pidDebug->d[Z]);
+    blackboxWriteSignedVB(blackboxCurrent->axisPID_D[X]);
+    blackboxWriteSignedVB(blackboxCurrent->axisPID_D[Y]);
+    blackboxWriteSignedVB(blackboxCurrent->axisPID_D[Z]);
 
     // gyroADC
-    gyroDev_t* gyro = &getSonsors()->gyro;
-    blackboxWriteSignedVB(gyro->raw[X]);
-    blackboxWriteSignedVB(gyro->raw[Y]);
-    blackboxWriteSignedVB(gyro->raw[Z]);
+    blackboxWriteSignedVB(blackboxCurrent->gyroADC[X]);
+    blackboxWriteSignedVB(blackboxCurrent->gyroADC[Y]);
+    blackboxWriteSignedVB(blackboxCurrent->gyroADC[Z]);
 
-    // rcCommand
-    command_t * fcCommand = &getFcControl()->fc_command;
-    blackboxWriteSignedVB(fcCommand->roll);
-    blackboxWriteSignedVB(fcCommand->pitch);
-    blackboxWriteSignedVB(fcCommand->yaw);
-    blackboxWriteUnsignedVB(fcCommand->throttle);
+    // acc
+    blackboxWriteSignedVB(blackboxCurrent->accADC[X]);
+    blackboxWriteSignedVB(blackboxCurrent->accADC[Y]);
+    blackboxWriteSignedVB(blackboxCurrent->accADC[Z]);
+
+    // rcCommand todo encode Predict 1500
+    blackboxWriteSignedVB(blackboxCurrent->rcCommand[ROLL]);
+    blackboxWriteSignedVB(blackboxCurrent->rcCommand[PITCH]);
+    blackboxWriteSignedVB(blackboxCurrent->rcCommand[YAW]);
+    blackboxWriteSignedVB(blackboxCurrent->rcCommand[THROTTLE]);
 
     // motor
-    motors_command_t * motorCommand = &getFcControl()->motor_command;
-    blackboxWriteUnsignedVB(motorCommand->value[0] - getFcConfig()->MINTHROTTLE);
-    blackboxWriteSignedVB(motorCommand->value[1] - motorCommand->value[0]);
-    blackboxWriteSignedVB(motorCommand->value[2] - motorCommand->value[0]);
-    blackboxWriteSignedVB(motorCommand->value[3] - motorCommand->value[0]);
+    blackboxWriteUnsignedVB(blackboxCurrent->motor[0] - getFcConfig()->MINTHROTTLE);
+    blackboxWriteSignedVB(blackboxCurrent->motor[1] - blackboxCurrent->motor[0]);
+    blackboxWriteSignedVB(blackboxCurrent->motor[2] - blackboxCurrent->motor[0]);
+    blackboxWriteSignedVB(blackboxCurrent->motor[3] - blackboxCurrent->motor[0]);
 
     sbufSwitchToReader(&logBuffer, &logLineData[0]);
     //printf("\n------------logIframe %d l = %d   ", blackboxIteration, sbufBytesRemaining(&logBuffer));
     mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
+
+    //Rotate our history buffers:
+
+    //The current state becomes the new "before" state
+    blackboxHistory[1] = blackboxHistory[0];
+    //And since we have no other history, we also use it for the "before, before" state
+    blackboxHistory[2] = blackboxHistory[0];
+    //And advance the current state over to a blank space ready to be filled
+    blackboxHistory[0] = ((blackboxHistory[0] - blackboxHistoryRing + 1) % 3) + blackboxHistoryRing;
+
 }
 
 static void writePFrame(void) {
-    sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES]);
+    sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES - 1]);
     blackboxWriteUnsignedVB('P');
 
-    sbufSwitchToReader(&logBuffer, &logLineData[0]);
-    //printf("logPframe %d l = %d   ", blackboxIteration, sbufBytesRemaining(&logBuffer));
-    mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
+//    //blackboxIteration no need to write since its increment 1
+//
+//    /*
+//     * Since the difference between the difference between successive times will be nearly zero (due to consistent
+//     * looptime spacing), use second-order differences.
+//     */
+//    blackboxWriteSignedVB((int32_t) (timeHistory[0] - 2 * timeHistory[1] + timeHistory[2]));
+//
+//    sbufSwitchToReader(&logBuffer, &logLineData[0]);
+//    //printf("logPframe %d l = %d   ", blackboxIteration, sbufBytesRemaining(&logBuffer));
+//    mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
+//
+    //Rotate our history buffers
+    blackboxHistory[2] = blackboxHistory[1];
+    blackboxHistory[1] = blackboxHistory[0];
+    blackboxHistory[0] = ((blackboxHistory[0] - blackboxHistoryRing + 1) % 3) + blackboxHistoryRing;
 }
 
 // Called once every FC loop in order to log the current state
 static void blackboxLogIteration(timeUs_t currentTimeUs) {
+
     if (blackboxShouldLogIFrame()) {
+        loadMainState(currentTimeUs);
         writeIFrame();
-    } else {
-        if (blackboxShouldLogPFrame()) {
-            //writePFrame();
-        }
+    } else if (blackboxShouldLogPFrame()) {
+        //loadMainState(currentTimeUs);
+        //writePFrame();
     }
 }
 
 static const uint8_t blackboxHeader[] = "H Product:Blackbox flight data recorder by Nicholas Sherlock\nH Data version:2\n";
-static const uint8_t headerName[] = "H Field I name:loopIteration,time"
+static const uint8_t headerNamePart1[] = "H Field I name:loopIteration,time"
         ",axisP[0],axisP[1],axisP[2]"
         ",axisI[0],axisI[1],axisI[2]"
         ",axisD[0],axisD[1],axisD[2]"
-        ",gyroADC[0],gyroADC[1],gyroADC[2]"
+        ",gyroADC[0],gyroADC[1],gyroADC[2]";
+static const uint8_t headerNamePart2[] = ",accSmooth[0],accSmooth[1],accSmooth[2]"
         ",rcCommand[0],rcCommand[1],rcCommand[2],rcCommand[3]"
         ",motor[0],motor[1],motor[2],motor[3]"
         "\n";
@@ -283,6 +360,7 @@ static const uint8_t headerSigned[] = "H Field I signed:0,0"
         ",1,1,1"//i
         ",1,1,1"//d
         ",1,1,1"//gyroADC
+        ",1,1,1"//accSmooth
         ",1,1,1,0"//rcCommand
         ",0,0,0,0"//motor
         "\n";
@@ -295,6 +373,7 @@ static const uint8_t headerPredictor[] = "H Field I predictor:0,0"
         ",0,0,0"//i
         ",0,0,0"//d
         ",0,0,0"//gyroADC
+        ",0,0,0"//accSmooth
         ",0,0,0,0"//rcCommand
         ",11,5,5,5"//motor
         "\n";
@@ -306,18 +385,22 @@ static const uint8_t headerEncoding[] = "H Field I encoding:1,1"
         ",0,0,0"//i
         ",0,0,0"//d
         ",0,0,0"//gyroADC
+        ",0,0,0"//accSmooth
         ",0,0,0,1"//rcCommand
         ",1,0,0,0"//motor
         "\n";
 
 //0 = Predict zero
 //1 = Predict last value
+//2 = Predict straight line
 //3 = Predict average 2
+//6 = Predict increment
 static const uint8_t pHeaderPredictor[] = "H Field P predictor:6,2"
         ",1,1,1" //p
         ",1,1,1"//i
         ",1,1,1"//d
         ",3,3,3"//gyroADC
+        ",3,3,3"//accSmooth
         ",1,1,1,1"//rcCommand
         ",3,3,3,3"//motor
         "\n";
@@ -330,6 +413,7 @@ static const uint8_t pHheaderEncoding[] = "H Field P encoding:9,0"
         ",0,0,0"//i
         ",0,0,0"//d
         ",0,0,0"//gyroADC
+        ",0,0,0"//accSmooth
         ",0,0,0,1"//rcCommand
         ",1,1,1,1"//motor
         "\n";
@@ -350,6 +434,11 @@ void blackboxUpdate(timeUs_t currentTimeUs) {
     case BLACKBOX_STATE_STOPPED:
         if (getFcStatus()->ARMED) {
             blackboxState = BLACKBOX_STATE_SEND_START;
+
+            blackboxHistory[0] = &blackboxHistoryRing[0];
+            blackboxHistory[1] = &blackboxHistoryRing[1];
+            blackboxHistory[2] = &blackboxHistoryRing[2];
+            //No need to clear the content of blackboxHistoryRing since our first frame will be an intra which overwrites it
         }
         break;
     case BLACKBOX_STATE_SEND_START:
@@ -361,10 +450,11 @@ void blackboxUpdate(timeUs_t currentTimeUs) {
 
     case BLACKBOX_STATE_SEND_HEADER: {
         //reset log Buffer
-        sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES]);
+        sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES - 1]);
         //I and P definition
         blackboxPrintfHeaderLine("I interval", "%d", blackboxIInterval);
-        blackboxPrintfHeaderLine("P interval", "%s", "1/16");
+        blackboxPrintfHeaderLine("P interval", "%d", blackboxPInterval);
+        blackboxPrintfHeaderLine("P ratio", "%d", blackboxConfig()->p_ratio);
         sbufSwitchToReader(&logBuffer, &logLineData[0]);
         mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
         blackboxState = BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_NAMES;
@@ -372,7 +462,8 @@ void blackboxUpdate(timeUs_t currentTimeUs) {
         break;
 
     case BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_NAMES:
-        mspWriteBlackBoxData(headerName, sizeof(headerName));
+        mspWriteBlackBoxData(headerNamePart1, sizeof(headerNamePart1) - 1); //dont send enf of string here
+        mspWriteBlackBoxData(headerNamePart2, sizeof(headerNamePart2));
         blackboxState = BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_SIGNED;
         break;
     case BLACKBOX_STATE_SEND_MAIN_FIELD_HEADER_SIGNED:
@@ -393,11 +484,13 @@ void blackboxUpdate(timeUs_t currentTimeUs) {
         break;
     case BLACKBOX_STATE_SEND_EXTRA_HEADERS: {
         gyroDev_t* gyro = &getSonsors()->gyro;
+        accDev_t* acc = &getSonsors()->acc;
         //reset log Buffer
-        sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES]);
+        sbufInit(&logBuffer, &logLineData[0], &logLineData[LOG_LINE_MAX_BYTES - 1]);
         blackboxPrintfHeaderLine("minthrottle", "%d", getFcConfig()->MINTHROTTLE);
         blackboxPrintfHeaderLine("maxthrottle", "%d", getFcConfig()->MAXTHROTTLE);
         blackboxPrintfHeaderLine("gyro_scale", "0x%x", castFloatBytesToInt(gyro->scale * (M_PIf / 180) * 0.000001));
+        blackboxPrintfHeaderLine("acc_1G", "%u", (uint16_t) ((float) 1 / acc->scale));
         sbufSwitchToReader(&logBuffer, &logLineData[0]);
         mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
         blackboxState = BLACKBOX_STATE_SEND_LOG;

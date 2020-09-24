@@ -209,13 +209,13 @@ static void* udpThread(void* data) {
     printf("udpThread end!!\n");
     return NULL;
 }
-
+int16_t accfake = -8192;
 static bool acc_simRead(accDev_t *acc) {
     pthread_mutex_lock(&udpLock);
 
-    acc->ADCRaw[X] = lastSimPkt.imu_linear_acceleration_xyz[X];
-    acc->ADCRaw[Y] = lastSimPkt.imu_linear_acceleration_xyz[Y];
-    acc->ADCRaw[Z] = lastSimPkt.imu_linear_acceleration_xyz[Z];
+    acc->ADCRaw[X] = 8192;//lastSimPkt.imu_linear_acceleration_xyz[X];
+    acc->ADCRaw[Y] = accfake++;//lastSimPkt.imu_linear_acceleration_xyz[Y];
+    acc->ADCRaw[Z] = -8192;//lastSimPkt.imu_linear_acceleration_xyz[Z];
     acc->lastReadTime = lastSimPkt.timestamp * 1000000;
 
     pthread_mutex_unlock(&udpLock);
@@ -223,14 +223,15 @@ static bool acc_simRead(accDev_t *acc) {
     return true;
 }
 
+int16_t fake = -32767;
 static bool gyro_simRead(gyroDev_t *gyro) {
 
     pthread_mutex_lock(&udpLock);
 
 
-    gyro->raw[X] = lastSimPkt.imu_angular_velocity_rpy[X];
-    gyro->raw[Y] = lastSimPkt.imu_angular_velocity_rpy[Y];
-    gyro->raw[Z] = lastSimPkt.imu_angular_velocity_rpy[Z];
+    gyro->raw[X] = 32767;//lastSimPkt.imu_angular_velocity_rpy[X];
+    gyro->raw[Y] = fake++;//lastSimPkt.imu_angular_velocity_rpy[Y];
+    gyro->raw[Z] = -32767;//lastSimPkt.imu_angular_velocity_rpy[Z];
 
     gyro->lastReadTime = lastSimPkt.timestamp * 1000000;
 

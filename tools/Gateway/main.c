@@ -135,40 +135,54 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
         //printf(" , ");
         break;
     }
+    case MSP_BLACKBOX_START: {
+        printf("Logger started\n");
+        fflush(stdout);
+        break;
+    }
+    case MSP_BLACKBOX_STOP: {
+        printf("Logger stoped\n");
+        break;
+    }
     default:
         printf("WATT??\n");
         break;
     }
 }
 
+int armedFake = true;
 static void taskJoy(timeUs_t currentTimeUs) {
-    readJoy();
-//        for (int i = 0; i < RX_CHANL_COUNT; i++) {
-//            sbufWriteU16(dst, rx->chan[i]);
-//        }
-
+    //readJoy();
     uint8_t data[12];
     sbuf_t buf;
-    sbufInit(&buf, &data[0], &data[12]);
+    sbufInit(&buf, &data[0], &data[11]);
+
+    rx_joy.arm = 1000;
+    rx_joy.roll = 1500;
+    rx_joy.pitch = 1500;
+    rx_joy.yaw = 1500;
+    rx_joy.throttle = 1000;
+    rx_joy.arm = armedFake ? 2000 : 1000;
 
     sbufWriteU16(&buf, rx_joy.roll);
     sbufWriteU16(&buf, rx_joy.pitch);
     sbufWriteU16(&buf, rx_joy.yaw);
     sbufWriteU16(&buf, rx_joy.throttle);
     sbufWriteU16(&buf, rx_joy.arm);
-    sbufWriteU16(&buf, 5);
+    sbufWriteU16(&buf, 10);  // Todo wenn hier 5 gehts ned was macht liux da
 
+    sbufSwitchToReader(&buf, &data[0]);
     printf("roll %6d, pitch %6d, yaw %6d, thrust %6d, arm %d \n", rx_joy.roll, rx_joy.pitch, rx_joy.yaw, rx_joy.throttle, rx_joy.arm);
-
-    mspSerialPush(&mspPort, MSP_SET_RAW_RC, &data[0], 12, MSP_DIRECTION_REQUEST);
+    mspSerialPush(&mspPort, MSP_SET_RAW_RC, data, sbufBytesRemaining(&buf), MSP_DIRECTION_REQUEST);
 }
 
 static void taskSystem(timeUs_t currentTimeUs) {
-    // mspSerialPush(&mspPort, MSP_ATTITUDE, 0, 0, MSP_DIRECTION_REQUEST);
+    //mspSerialPush(&mspPort, MSP_ATTITUDE, 0, 0, MSP_DIRECTION_REQUEST);
 }
 
 static void taskLogger(timeUs_t currentTimeUs) {
-   // mspSerialPush(&mspPort, MSP_BLACKBOX_STOP, 0, 0, MSP_DIRECTION_REQUEST);
+    armedFake = false;
+    //mspSerialPush(&mspPort, MSP_BLACKBOX_STOP, 0, 0, MSP_DIRECTION_REQUEST);
 }
 static void taskHandleSerial(timeUs_t currentTimeUs) {
     if (uart) {
@@ -192,7 +206,7 @@ static task_t tasks[TASK_COUNT] = {
         .taskName = "TASK_DEBUG",
         .taskFunc = taskLogger,
         .staticPriority = 1,
-        .desiredPeriodUs = 60000000, }, //60sec
+        .desiredPeriodUs = 30000000, }, //60sec
     [TASK_SYSTEM] = {
         .taskName = "TASK_SYSTEM",
         .taskFunc = taskSystem,

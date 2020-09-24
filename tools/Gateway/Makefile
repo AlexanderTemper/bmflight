@@ -49,6 +49,7 @@ CFLAGS += -Wunreachable-code
 CFLAGS += -Wcast-align
 CFLAGS += --param max-inline-insns-single=500
 
+CFLAGS += -DEBUG -O0 -g3 -gdwarf-2
 # Include PATHS
 INC_PATH := \
 	$(FC_SRC_DIR)src \

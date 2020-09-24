@@ -527,14 +527,10 @@ static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
     case MSP_SET_RAW_RC: {
         rx_command_t *rx = &getFcControl()->rx;
         uint8_t channelCount = dataSize / sizeof(uint16_t);
-//        if (channelCount > RX_CHANL_COUNT) {
-//            return MSP_RESULT_ERROR;
-//        } else {
         for (int i = 0; i < RX_CHANL_COUNT && i < channelCount; i++) {
             rx->chan[i] = sbufReadU16(src);
         }
         rx->lastReceived = micros();
-        //}
     }
         break;
     default:
