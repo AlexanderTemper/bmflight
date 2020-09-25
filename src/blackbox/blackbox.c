@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include <stddef.h>
 
 #include "global.h"
 #include "stdarg.h"
@@ -106,22 +107,21 @@ static const uint8_t headerNamePart1[] = "H Field I name:loopIteration,time"
         ",axisP[0],axisP[1],axisP[2]"
         ",axisI[0],axisI[1],axisI[2]"
         ",axisD[0],axisD[1],axisD[2]"
-//",gyroADC[0],gyroADC[1],gyroADC[2]"
-;
-static const uint8_t headerNamePart2[] = //",accSmooth[0],accSmooth[1],accSmooth[2]"
-//       ",rcCommand[0],rcCommand[1],rcCommand[2],rcCommand[3]"
-//        ",motor[0],motor[1],motor[2],motor[3]"
-"\n";
+        ",gyroADC[0],gyroADC[1],gyroADC[2]";
+static const uint8_t headerNamePart2[] = ",accSmooth[0],accSmooth[1],accSmooth[2]"
+        ",rcCommand[0],rcCommand[1],rcCommand[2],rcCommand[3]"
+        ",motor[0],motor[1],motor[2],motor[3]"
+        "\n";
 //1 = signed
 //0 = unsigned
 static const uint8_t headerSigned[] = "H Field I signed:0,0"
         ",1,1,1" //p
         ",1,1,1"//i
         ",1,1,1"//d
-//        ",1,1,1"//gyroADC
-//        ",1,1,1"//accSmooth
-//        ",1,1,1,0"//rcCommand
-//        ",0,0,0,0"//motor
+        ",1,1,1"//gyroADC
+        ",1,1,1"//accSmooth
+        ",1,1,1,0"//rcCommand
+        ",0,0,0,0"//motor
         "\n";
 //0 = Predict zero
 //1 = Predict last value
@@ -131,10 +131,10 @@ static const uint8_t headerPredictor[] = "H Field I predictor:0,0"
         ",0,0,0" //p
         ",0,0,0"//i
         ",0,0,0"//d
-//        ",0,0,0"//gyroADC
-//        ",0,0,0"//accSmooth
-//        ",0,0,0,0"//rcCommand
-//        ",11,5,5,5"//motor
+        ",0,0,0"//gyroADC
+        ",0,0,0"//accSmooth
+        ",0,0,0,0"//rcCommand
+        ",11,5,5,5"//motor
         "\n";
 
 //0 = signed
@@ -143,10 +143,10 @@ static const uint8_t headerEncoding[] = "H Field I encoding:1,1"
         ",0,0,0" //p
         ",0,0,0"//i
         ",0,0,0"//d
-//        ",0,0,0"//gyroADC
-//        ",0,0,0"//accSmooth
-//        ",0,0,0,1"//rcCommand
-//        ",1,0,0,0"//motor
+        ",0,0,0"//gyroADC
+        ",0,0,0"//accSmooth
+        ",0,0,0,1"//rcCommand
+        ",1,0,0,0"//motor
         "\n";
 
 //0 = Predict zero
@@ -158,27 +158,110 @@ static const uint8_t pHeaderPredictor[] = "H Field P predictor:6,2"
         ",1,1,1" //p
         ",1,1,1"//i
         ",1,1,1"//d
-//        ",3,3,3"//gyroADC
-//        ",3,3,3"//accSmooth
-//        ",1,1,1,1"//rcCommand
-//        ",3,3,3,3"//motor
+        ",3,3,3"//gyroADC
+        ",3,3,3"//accSmooth
+        ",1,1,1,1"//rcCommand
+        ",3,3,3,3"//motor
         "\n";
 //0 = signed
 //1 = unsigned
 //7 = TAG2_3S32
+//8 = TAG8_4S16
 //9 = NULL
 static const uint8_t pHheaderEncoding[] = "H Field P encoding:9,0"
         ",0,0,0" //p
         ",0,0,0"//i
         ",0,0,0"//d
-//        ",0,0,0"//gyroADC
-//        ",0,0,0"//accSmooth
-//        ",0,0,0,1"//rcCommand
-//        ",1,1,1,1"//motor
+        ",0,0,0"//gyroADC
+        ",0,0,0"//accSmooth
+        ",8,8,8,8"//rcCommand
+        ",1,1,1,1"//motor
         "\n";
 
 static void blackboxWrite(uint8_t value) {
     sbufWriteU8(&logBuffer, value);
+}
+
+/// Some Helper Function todo Move them in own file
+
+/**
+ * Write an 8-bit selector followed by four signed fields of size 0, 4, 8 or 16 bits.
+ */
+void blackboxWriteTag8_4S16(int32_t *values) {
+
+    //Need to be enums rather than const ints if we want to switch on them (due to being C)
+    enum {
+        FIELD_ZERO = 0,
+        FIELD_4BIT = 1,
+        FIELD_8BIT = 2,
+        FIELD_16BIT = 3
+    };
+
+    uint8_t selector = 0;
+    //Encode in reverse order so the first field is in the low bits:
+    for (int x = 3; x >= 0; x--) {
+        selector <<= 2;
+
+        if (values[x] == 0) {
+            selector |= FIELD_ZERO;
+        } else if (values[x] < 8 && values[x] >= -8) {
+            selector |= FIELD_4BIT;
+        } else if (values[x] < 128 && values[x] >= -128) {
+            selector |= FIELD_8BIT;
+        } else {
+            selector |= FIELD_16BIT;
+        }
+    }
+
+    blackboxWrite(selector);
+
+    int nibbleIndex = 0;
+    uint8_t buffer = 0;
+    for (int x = 0; x < 4; x++, selector >>= 2) {
+        switch (selector & 0x03) {
+        case FIELD_ZERO:
+            //No-op
+            break;
+        case FIELD_4BIT:
+            if (nibbleIndex == 0) {
+                //We fill high-bits first
+                buffer = values[x] << 4;
+                nibbleIndex = 1;
+            } else {
+                blackboxWrite(buffer | (values[x] & 0x0F));
+                nibbleIndex = 0;
+            }
+            break;
+        case FIELD_8BIT:
+            if (nibbleIndex == 0) {
+                blackboxWrite(values[x]);
+            } else {
+                //Write the high bits of the value first (mask to avoid sign extension)
+                blackboxWrite(buffer | ((values[x] >> 4) & 0x0F));
+                //Now put the leftover low bits into the top of the next buffer entry
+                buffer = values[x] << 4;
+            }
+            break;
+        case FIELD_16BIT:
+            if (nibbleIndex == 0) {
+                //Write high byte first
+                blackboxWrite(values[x] >> 8);
+                blackboxWrite(values[x]);
+            } else {
+                //First write the highest 4 bits
+                blackboxWrite(buffer | ((values[x] >> 12) & 0x0F));
+                // Then the middle 8
+                blackboxWrite(values[x] >> 4);
+                //Only the smallest 4 bits are still left to write
+                buffer = values[x] << 4;
+            }
+            break;
+        }
+    }
+    //Anything left over to write?
+    if (nibbleIndex == 1) {
+        blackboxWrite(buffer);
+    }
 }
 /**
  * Write an unsigned integer to the blackbox using variable byte encoding.
@@ -289,7 +372,6 @@ static bool blackboxShouldLogIFrame(void) {
     return blackboxLoopIndex == 0;
 }
 
-uint32_t dummy = 0;
 /**
  * Fill the current state of the blackbox using values read from the flight controller
  */
@@ -302,9 +384,8 @@ static void loadMainState(timeUs_t currentTimeUs) {
     accDev_t* acc = &getSonsors()->acc;
     pid_debug_t* pidDebug = &getFcDebug()->pid_debug;
     command_t * fcCommand = &getFcControl()->fc_command;
-    dummy++;
     for (int i = 0; i < XYZ_AXIS_COUNT; i++) {
-        blackboxCurrent->axisPID_P[i] = dummy;//pidDebug->p[i];
+        blackboxCurrent->axisPID_P[i] = pidDebug->p[i];
         blackboxCurrent->axisPID_I[i] = pidDebug->i[i];
         blackboxCurrent->axisPID_D[i] = pidDebug->d[i];
         blackboxCurrent->gyroADC[i] = gyro->raw[i];
@@ -320,6 +401,19 @@ static void loadMainState(timeUs_t currentTimeUs) {
     motors_command_t * motorCommand = &getFcControl()->motor_command;
     for (int i = 0; i < 4; i++) {
         blackboxCurrent->motor[i] = motorCommand->value[i];
+    }
+}
+
+static void blackboxWriteMainStateArrayUsingAveragePredictor(int arrOffsetInHistory, int count) {
+    int16_t *curr = (int16_t*) ((char*) (blackboxHistory[0]) + arrOffsetInHistory);
+    int16_t *prev1 = (int16_t*) ((char*) (blackboxHistory[1]) + arrOffsetInHistory);
+    int16_t *prev2 = (int16_t*) ((char*) (blackboxHistory[2]) + arrOffsetInHistory);
+
+    for (int i = 0; i < count; i++) {
+        // Predictor is the average of the previous two history states
+        int32_t predictor = (prev1[i] + prev2[i]) / 2;
+
+        blackboxWriteSignedVB(curr[i] - predictor);
     }
 }
 
@@ -344,27 +438,27 @@ static void writeIFrame(void) {
     blackboxWriteSignedVB(blackboxCurrent->axisPID_D[Y]);
     blackboxWriteSignedVB(blackboxCurrent->axisPID_D[Z]);
 
-//    // gyroADC
-//    blackboxWriteSignedVB(blackboxCurrent->gyroADC[X]);
-//    blackboxWriteSignedVB(blackboxCurrent->gyroADC[Y]);
-//    blackboxWriteSignedVB(blackboxCurrent->gyroADC[Z]);
-//
-//    // acc
-//    blackboxWriteSignedVB(blackboxCurrent->accADC[X]);
-//    blackboxWriteSignedVB(blackboxCurrent->accADC[Y]);
-//    blackboxWriteSignedVB(blackboxCurrent->accADC[Z]);
-//
-//    // rcCommand todo encode Predict 1500
-//    blackboxWriteSignedVB(blackboxCurrent->rcCommand[ROLL]);
-//    blackboxWriteSignedVB(blackboxCurrent->rcCommand[PITCH]);
-//    blackboxWriteSignedVB(blackboxCurrent->rcCommand[YAW]);
-//    blackboxWriteSignedVB(blackboxCurrent->rcCommand[THROTTLE]);
-//
-//    // motor
-//    blackboxWriteUnsignedVB(blackboxCurrent->motor[0] - getFcConfig()->MINTHROTTLE);
-//    blackboxWriteSignedVB(blackboxCurrent->motor[1] - blackboxCurrent->motor[0]);
-//    blackboxWriteSignedVB(blackboxCurrent->motor[2] - blackboxCurrent->motor[0]);
-//    blackboxWriteSignedVB(blackboxCurrent->motor[3] - blackboxCurrent->motor[0]);
+    // gyroADC
+    blackboxWriteSignedVB(blackboxCurrent->gyroADC[X]);
+    blackboxWriteSignedVB(blackboxCurrent->gyroADC[Y]);
+    blackboxWriteSignedVB(blackboxCurrent->gyroADC[Z]);
+
+    // acc
+    blackboxWriteSignedVB(blackboxCurrent->accADC[X]);
+    blackboxWriteSignedVB(blackboxCurrent->accADC[Y]);
+    blackboxWriteSignedVB(blackboxCurrent->accADC[Z]);
+
+    // rcCommand
+    blackboxWriteSignedVB(blackboxCurrent->rcCommand[ROLL]);
+    blackboxWriteSignedVB(blackboxCurrent->rcCommand[PITCH]);
+    blackboxWriteSignedVB(blackboxCurrent->rcCommand[YAW]);
+    blackboxWriteUnsignedVB(blackboxCurrent->rcCommand[THROTTLE]);
+
+    // motor
+    blackboxWriteUnsignedVB(blackboxCurrent->motor[0] - getFcConfig()->MINTHROTTLE);
+    blackboxWriteSignedVB(blackboxCurrent->motor[1] - blackboxCurrent->motor[0]);
+    blackboxWriteSignedVB(blackboxCurrent->motor[2] - blackboxCurrent->motor[0]);
+    blackboxWriteSignedVB(blackboxCurrent->motor[3] - blackboxCurrent->motor[0]);
 
     sbufSwitchToReader(&logBuffer, &logLineData[0]);
     //printf("\n------%d,%d:I %d ", blackboxCurrent->time, blackboxIteration, sbufBytesRemaining(&logBuffer));
@@ -410,27 +504,17 @@ static void writePFrame(void) {
     blackboxWriteSignedVB(blackboxCurrent->axisPID_D[Y] - blackboxLast->axisPID_D[Y]);
     blackboxWriteSignedVB(blackboxCurrent->axisPID_D[Z] - blackboxLast->axisPID_D[Z]);
 
-//    //gyro
-//    blackboxWriteSignedVB(blackboxCurrent->gyroADC[X]);
-//        blackboxWriteSignedVB(blackboxCurrent->gyroADC[Y]);
-//        blackboxWriteSignedVB(blackboxCurrent->gyroADC[Z]);
-//
-//        // acc
-//        blackboxWriteSignedVB(blackboxCurrent->accADC[X]);
-//        blackboxWriteSignedVB(blackboxCurrent->accADC[Y]);
-//        blackboxWriteSignedVB(blackboxCurrent->accADC[Z]);
-//
-//        // rcCommand todo encode Predict 1500
-//        blackboxWriteSignedVB(blackboxCurrent->rcCommand[ROLL]);
-//        blackboxWriteSignedVB(blackboxCurrent->rcCommand[PITCH]);
-//        blackboxWriteSignedVB(blackboxCurrent->rcCommand[YAW]);
-//        blackboxWriteSignedVB(blackboxCurrent->rcCommand[THROTTLE]);
-//
-//        // motor
-//        blackboxWriteUnsignedVB(blackboxCurrent->motor[0] - getFcConfig()->MINTHROTTLE);
-//        blackboxWriteSignedVB(blackboxCurrent->motor[1] - blackboxCurrent->motor[0]);
-//        blackboxWriteSignedVB(blackboxCurrent->motor[2] - blackboxCurrent->motor[0]);
-//        blackboxWriteSignedVB(blackboxCurrent->motor[3] - blackboxCurrent->motor[0]);
+    //Since gyros, accs and motors are noisy, base their predictions on the average of the history:
+    blackboxWriteMainStateArrayUsingAveragePredictor(offsetof(blackboxMainState_t, gyroADC), XYZ_AXIS_COUNT);
+    blackboxWriteMainStateArrayUsingAveragePredictor(offsetof(blackboxMainState_t, accADC), XYZ_AXIS_COUNT);
+
+    int32_t deltas[4];
+    for (int x = 0; x < 4; x++) {
+        deltas[x] = blackboxCurrent->rcCommand[x] - blackboxLast->rcCommand[x];
+    }
+    blackboxWriteTag8_4S16(deltas);
+
+    blackboxWriteMainStateArrayUsingAveragePredictor(offsetof(blackboxMainState_t, motor), 4);
 
     sbufSwitchToReader(&logBuffer, &logLineData[0]);
     //printf("\n%d,%d:P %d ", blackboxCurrent->time, blackboxIteration, sbufBytesRemaining(&logBuffer));
@@ -528,6 +612,8 @@ void blackboxUpdate(timeUs_t currentTimeUs) {
         blackboxPrintfHeaderLine("maxthrottle", "%d", getFcConfig()->MAXTHROTTLE);
         blackboxPrintfHeaderLine("gyro_scale", "0x%x", castFloatBytesToInt(gyro->scale * (M_PIf / 180) * 0.000001));
         blackboxPrintfHeaderLine("acc_1G", "%u", (uint16_t) ((float) 1 / acc->scale));
+        blackboxPrintfHeaderLine("looptime", "%u", (uint16_t)(1000000 / TARGET_LOOP_HZ));
+
         sbufSwitchToReader(&logBuffer, &logLineData[0]);
         mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));
         blackboxState = BLACKBOX_STATE_SEND_LOG;

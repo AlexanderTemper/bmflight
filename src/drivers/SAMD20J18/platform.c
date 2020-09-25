@@ -14,6 +14,7 @@
 #include "fc/fc.h"
 #include "common/debug.h"
 #include "common/time.h"
+#include "common/maths.h"
 #include "io/serial.h"
 #include "io/motor.h"
 #include "io/pin.h"
@@ -31,22 +32,25 @@ static sensors_t sensors;
 static uint8_t rxBuffer[BUFFER_SIZE];
 static uint8_t txBuffer[BUFFER_SIZE];
 
-//static void debugSerial(const uint8_t* data, uint16_t len) {
-//    serialWriteBuf(&serialInstance, data, len);
-//}
-int16_t accfake = -8192;
+
+
+static int16_t SinFunction(timeUs_t currentTime) {
+#define SIN_PERIOD 50000 //120Hz
+    float omega = 2*M_PIf/SIN_PERIOD;
+    int periods = currentTime /SIN_PERIOD;
+    uint32_t time = currentTime - periods * SIN_PERIOD;
+    return 4000 * sin_approx(omega*time);
+}
+
 static bool bma280Read(accDev_t *acc) {
 
     struct bma2x2_accel_data rawData;
     if (bma2x2_read_accel_xyz(&rawData) != 0) {
         return false;
     }
-//    acc->ADCRaw[X] = rawData.x;
-//    acc->ADCRaw[Y] = rawData.y;
-//    acc->ADCRaw[Z] = rawData.z;
-    acc->ADCRaw[X] = 8192;//lastSimPkt.imu_linear_acceleration_xyz[X];
-     acc->ADCRaw[Y] = accfake++;//lastSimPkt.imu_linear_acceleration_xyz[Y];
-     acc->ADCRaw[Z] = -8192;//lastSimPkt.imu_linear_acceleration_xyz[Z];
+    acc->ADCRaw[X] = SinFunction(micros());//rawData.x;
+    acc->ADCRaw[Y] = rawData.y;
+    acc->ADCRaw[Z] = rawData.z;
     acc->lastReadTime = micros();
     return true;
 }
@@ -60,19 +64,18 @@ static void accInit(void) {
     sensors.acc.readFn = bma280Read;
     sensors.acc.scale = 1.0f / 1024.0f;
 }
-int16_t fake = -32767;
+
+
 static bool bmg160Read(gyroDev_t *gyro) {
 
     struct bmg160_data_t rawData;
     if (bmg160_get_data_XYZ(&rawData) != 0) {
         return false;
     }
-//    gyro->raw[X] = rawData.datax;
-//    gyro->raw[Y] = rawData.datay;
-//    gyro->raw[Z] = rawData.dataz;
-    gyro->raw[X] = 32767;//lastSimPkt.imu_angular_velocity_rpy[X];
-       gyro->raw[Y] = fake++;//lastSimPkt.imu_angular_velocity_rpy[Y];
-       gyro->raw[Z] = -32767;//lastSimPkt.imu_angular_velocity_rpy[Z];
+    gyro->raw[X] = rawData.datax;
+    gyro->raw[Y] = rawData.datay;
+    gyro->raw[Z] = rawData.dataz;
+
     gyro->lastReadTime = micros();
 
     return true;

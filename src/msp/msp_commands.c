@@ -331,6 +331,8 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         memset(emptySignature, 0, sizeof(emptySignature));
         sbufWriteData(dst, &emptySignature, sizeof(emptySignature));
         sbufWriteU8(dst, 255);
+        sbufWriteU8(dst, 0);
+        sbufWriteU16(dst, TARGET_LOOP_HZ); // informational so the configurator can display the correct gyro/pid frequencies in the drop-down
         break;
     }
 

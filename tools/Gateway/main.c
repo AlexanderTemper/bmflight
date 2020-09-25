@@ -108,7 +108,8 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
     case MSP_BLACKBOX_DATA: {
         fwrite(src->ptr, 1, sbufBytesRemaining(src), blackBoxFile);
         logCounter++;
-        //printf("%d\n", logCounter);
+        printf("%d\r", logCounter);
+        fflush(stdout);
         fclose(blackBoxFile);
         blackBoxFile = fopen(BLACKBOX_LOGFILE_NAME, "a+");
         if (blackBoxFile == NULL) {
@@ -152,6 +153,7 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
 }
 
 int armedFake = true;
+int wobbleFake = 1000;
 static void taskJoy(timeUs_t currentTimeUs) {
     //readJoy();
     uint8_t data[12];
@@ -162,7 +164,7 @@ static void taskJoy(timeUs_t currentTimeUs) {
     rx_joy.roll = 1500;
     rx_joy.pitch = 1500;
     rx_joy.yaw = 1500;
-    rx_joy.throttle = 1000;
+    rx_joy.throttle = (wobbleFake+=10)%1000+1000;
     rx_joy.arm = armedFake ? 2000 : 1000;
 
     sbufWriteU16(&buf, rx_joy.roll);
@@ -170,7 +172,7 @@ static void taskJoy(timeUs_t currentTimeUs) {
     sbufWriteU16(&buf, rx_joy.yaw);
     sbufWriteU16(&buf, rx_joy.throttle);
     sbufWriteU16(&buf, rx_joy.arm);
-    sbufWriteU16(&buf, 10);  // Todo wenn hier 5 gehts ned was macht liux da
+    sbufWriteU16(&buf, 1000);  // Todo wenn hier 5 gehts ned was macht liux da
 
     sbufSwitchToReader(&buf, &data[0]);
     //printf("roll %6d, pitch %6d, yaw %6d, thrust %6d, arm %d \n", rx_joy.roll, rx_joy.pitch, rx_joy.yaw, rx_joy.throttle, rx_joy.arm);
@@ -208,7 +210,7 @@ static task_t tasks[TASK_COUNT] = {
         .taskName = "TASK_DEBUG",
         .taskFunc = taskLogger,
         .staticPriority = 1,
-        .desiredPeriodUs = 4000000, }, //60sec
+        .desiredPeriodUs = 10000000, }, //60sec
     [TASK_SYSTEM] = {
         .taskName = "TASK_SYSTEM",
         .taskFunc = taskSystem,
@@ -284,11 +286,11 @@ int main(int argc, char *argv[]) {
 
     int js = initJoy("/dev/input/js0");
 
-    if (js == -1) {
-        perror("Joy not connected");
-    } else {
+//    if (js == -1) {
+//        perror("Joy not connected");
+//    } else {
         setTaskEnabled(TASK_RX, true);
-    }
+//    }
 
     setTaskEnabled(TASK_SERIAL, true);
     setTaskEnabled(TASK_DEBUG, true);
