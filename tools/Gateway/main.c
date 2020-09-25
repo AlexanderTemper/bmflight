@@ -164,7 +164,7 @@ static void taskJoy(timeUs_t currentTimeUs) {
     rx_joy.roll = 1500;
     rx_joy.pitch = 1500;
     rx_joy.yaw = 1500;
-    rx_joy.throttle = (wobbleFake+=10)%1000+1000;
+    rx_joy.throttle = (wobbleFake += 10) % 1000 + 1000;
     rx_joy.arm = armedFake ? 2000 : 1000;
 
     sbufWriteU16(&buf, rx_joy.roll);
@@ -195,7 +195,16 @@ static void taskHandleSerial(timeUs_t currentTimeUs) {
     mspProcess(&mspPort);
 }
 
+static void taskLoop(timeUs_t currentTimeUs) {
+
+}
+
 static task_t tasks[TASK_COUNT] = {
+    [TASK_LOOP] = { //Needed RealTime Task (in firmware main gyro looptime)
+        .taskName = "TASK_LOOP",
+        .taskFunc = taskLoop,
+        .staticPriority = 200,
+        .desiredPeriodUs = 100000000, },
     [TASK_SERIAL] = {
         .taskName = "TASK_SERIAL",
         .taskFunc = taskHandleSerial,
@@ -210,7 +219,7 @@ static task_t tasks[TASK_COUNT] = {
         .taskName = "TASK_DEBUG",
         .taskFunc = taskLogger,
         .staticPriority = 1,
-        .desiredPeriodUs = 10000000, }, //60sec
+        .desiredPeriodUs = 15000000, }, //60sec
     [TASK_SYSTEM] = {
         .taskName = "TASK_SYSTEM",
         .taskFunc = taskSystem,
@@ -289,10 +298,11 @@ int main(int argc, char *argv[]) {
 //    if (js == -1) {
 //        perror("Joy not connected");
 //    } else {
-        setTaskEnabled(TASK_RX, true);
+    setTaskEnabled(TASK_RX, true);
 //    }
 
     setTaskEnabled(TASK_SERIAL, true);
+    setTaskEnabled(TASK_LOOP, true);
     setTaskEnabled(TASK_DEBUG, true);
 
     //mspSerialPush(&mspPort, MSP_BLACKBOX_START, 0, 0, MSP_DIRECTION_REQUEST); //start logging immediate

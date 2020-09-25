@@ -115,6 +115,7 @@ void getTaskInfo(taskId_e taskId, taskInfo_t * taskInfo) {
 task_t* getTaskQueueAt(uint8_t pos) {
     return taskQueueArray[pos];
 }
+#define GYRO_TASK_GUARD_INTERVAL_US 100
 
 void scheduler(void) {
     const timeUs_t schedulerStartTimeUs = micros();
@@ -122,20 +123,27 @@ void scheduler(void) {
     task_t *selectedTask = NULL;
     //printf("start was %d \t", currentTimeUs);
 
-    for (task_t *task = queueFirst(); task != NULL; task = queueNext()) {
-        // Select Task if time is expired
-        currentTimeUs = micros();
-        if (cmpTimeUs(currentTimeUs, task->lastExecutedAtUs) >= task->desiredPeriodUs) {
-            selectedTask = task;
-            break;
+    task_t* loopTask = getTask(TASK_LOOP);
+    const timeUs_t nextLoopTaskTime = loopTask->lastExecutedAtUs + loopTask->desiredPeriodUs;
+    const timeDelta_t loopTaskDelayUs = cmpTimeUs(nextLoopTaskTime, currentTimeUs);  // time until the next expected gyro sample
+    if (loopTaskDelayUs <= 0) { //select gyro Task
+        schedulerExecuteTask(loopTask, currentTimeUs);
+    } else if (loopTaskDelayUs > GYRO_TASK_GUARD_INTERVAL_US) { //only dispatch an task if gyro task has enough time left
+        for (task_t *task = queueFirst(); task != NULL; task = queueNext()) {
+            // Select Task if time is expired
+            currentTimeUs = micros();
+            if (cmpTimeUs(currentTimeUs, task->lastExecutedAtUs) >= task->desiredPeriodUs) {
+                selectedTask = task;
+                break;
+            }
         }
     }
 
     if (selectedTask) {
         schedulerExecuteTask(selectedTask, currentTimeUs);
-        schedulerWorkTimeUs += cmpTimeUs(micros(),schedulerStartTimeUs);
+        schedulerWorkTimeUs += cmpTimeUs(micros(), schedulerStartTimeUs);
     }
-    schedulerTotalTimeUs += cmpTimeUs(micros(),schedulerStartTimeUs);
+    schedulerTotalTimeUs += cmpTimeUs(micros(), schedulerStartTimeUs);
 
 }
 uint16_t getSystemLoad(void) {
