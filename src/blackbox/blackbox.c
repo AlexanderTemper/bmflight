@@ -32,6 +32,7 @@
 #include "blackbox/blackbox.h"
 #include "msp/msp.h"
 #include "fc/fc.h"
+#include "fc/tasks.h"
 #include "sensor/sensor.h"
 #include "common/streambuf.h"
 #include "common/sprintf.h"
@@ -89,6 +90,7 @@ typedef struct blackboxMainState_s {
     int16_t gyroADC[XYZ_AXIS_COUNT];
     int16_t accADC[XYZ_AXIS_COUNT];
     int16_t motor[4];
+    int32_t debug[3];
 } blackboxMainState_t;
 
 // Keep a history of length 2, plus a buffer for MW to store the new values into
@@ -109,6 +111,7 @@ static const uint8_t headerNamePart1[] = "H Field I name:loopIteration,time"
         ",axisD[0],axisD[1],axisD[2]"
         ",gyroADC[0],gyroADC[1],gyroADC[2]";
 static const uint8_t headerNamePart2[] = ",accSmooth[0],accSmooth[1],accSmooth[2]"
+        ",debug[0],debug[1],debug[2]"
         ",rcCommand[0],rcCommand[1],rcCommand[2],rcCommand[3]"
         ",motor[0],motor[1],motor[2],motor[3]"
         "\n";
@@ -120,6 +123,7 @@ static const uint8_t headerSigned[] = "H Field I signed:0,0"
         ",1,1,1"//d
         ",1,1,1"//gyroADC
         ",1,1,1"//accSmooth
+        ",1,1,1"//debug
         ",1,1,1,0"//rcCommand
         ",0,0,0,0"//motor
         "\n";
@@ -133,6 +137,7 @@ static const uint8_t headerPredictor[] = "H Field I predictor:0,0"
         ",0,0,0"//d
         ",0,0,0"//gyroADC
         ",0,0,0"//accSmooth
+        ",0,0,0"//debug
         ",0,0,0,0"//rcCommand
         ",11,5,5,5"//motor
         "\n";
@@ -145,6 +150,7 @@ static const uint8_t headerEncoding[] = "H Field I encoding:1,1"
         ",0,0,0"//d
         ",0,0,0"//gyroADC
         ",0,0,0"//accSmooth
+        ",0,0,0"//debug
         ",0,0,0,1"//rcCommand
         ",1,0,0,0"//motor
         "\n";
@@ -160,6 +166,7 @@ static const uint8_t pHeaderPredictor[] = "H Field P predictor:6,2"
         ",1,1,1"//d
         ",3,3,3"//gyroADC
         ",3,3,3"//accSmooth
+        ",1,1,1"//debug
         ",1,1,1,1"//rcCommand
         ",3,3,3,3"//motor
         "\n";
@@ -174,6 +181,7 @@ static const uint8_t pHheaderEncoding[] = "H Field P encoding:9,0"
         ",0,0,0"//d
         ",0,0,0"//gyroADC
         ",0,0,0"//accSmooth
+        ",0,0,0"//debug
         ",8,8,8,8"//rcCommand
         ",1,1,1,1"//motor
         "\n";
@@ -397,6 +405,10 @@ static void loadMainState(timeUs_t currentTimeUs) {
     blackboxCurrent->rcCommand[YAW] = fcCommand->yaw;
     blackboxCurrent->rcCommand[THROTTLE] = fcCommand->throttle;
 
+    task_t * loopTask = getTask(TASK_LOOP);
+    blackboxCurrent->debug[0]=loopTask->taskLatestDeltaTimeUs;
+    blackboxCurrent->debug[1] = -25;
+    blackboxCurrent->debug[2] = 25;
     // motor
     motors_command_t * motorCommand = &getFcControl()->motor_command;
     for (int i = 0; i < 4; i++) {
@@ -433,6 +445,7 @@ static void writeIFrame(void) {
     blackboxWriteSignedVB(blackboxCurrent->axisPID_I[X]);
     blackboxWriteSignedVB(blackboxCurrent->axisPID_I[Y]);
     blackboxWriteSignedVB(blackboxCurrent->axisPID_I[Z]);
+
     // axisD
     blackboxWriteSignedVB(blackboxCurrent->axisPID_D[X]);
     blackboxWriteSignedVB(blackboxCurrent->axisPID_D[Y]);
@@ -447,6 +460,11 @@ static void writeIFrame(void) {
     blackboxWriteSignedVB(blackboxCurrent->accADC[X]);
     blackboxWriteSignedVB(blackboxCurrent->accADC[Y]);
     blackboxWriteSignedVB(blackboxCurrent->accADC[Z]);
+
+    // debug
+    blackboxWriteSignedVB(blackboxCurrent->debug[0]);
+    blackboxWriteSignedVB(blackboxCurrent->debug[1]);
+    blackboxWriteSignedVB(blackboxCurrent->debug[2]);
 
     // rcCommand
     blackboxWriteSignedVB(blackboxCurrent->rcCommand[ROLL]);
@@ -507,6 +525,12 @@ static void writePFrame(void) {
     //Since gyros, accs and motors are noisy, base their predictions on the average of the history:
     blackboxWriteMainStateArrayUsingAveragePredictor(offsetof(blackboxMainState_t, gyroADC), XYZ_AXIS_COUNT);
     blackboxWriteMainStateArrayUsingAveragePredictor(offsetof(blackboxMainState_t, accADC), XYZ_AXIS_COUNT);
+
+    //debug
+    blackboxWriteSignedVB(blackboxCurrent->debug[0] - blackboxLast->debug[0]);
+    blackboxWriteSignedVB(blackboxCurrent->debug[1] - blackboxLast->debug[1]);
+    blackboxWriteSignedVB(blackboxCurrent->debug[2] - blackboxLast->debug[2]);
+
 
     int32_t deltas[4];
     for (int x = 0; x < 4; x++) {
@@ -612,7 +636,7 @@ void blackboxUpdate(timeUs_t currentTimeUs) {
         blackboxPrintfHeaderLine("maxthrottle", "%d", getFcConfig()->MAXTHROTTLE);
         blackboxPrintfHeaderLine("gyro_scale", "0x%x", castFloatBytesToInt(gyro->scale * (M_PIf / 180) * 0.000001));
         blackboxPrintfHeaderLine("acc_1G", "%u", (uint16_t) ((float) 1 / acc->scale));
-        blackboxPrintfHeaderLine("looptime", "%u", (uint16_t)(1000000 / TARGET_LOOP_HZ));
+        blackboxPrintfHeaderLine("looptime", "%u", (uint16_t) (1000000 / TARGET_LOOP_HZ));
 
         sbufSwitchToReader(&logBuffer, &logLineData[0]);
         mspWriteBlackBoxData(logLineData, sbufBytesRemaining(&logBuffer));

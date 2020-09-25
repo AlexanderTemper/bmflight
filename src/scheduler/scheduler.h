@@ -3,7 +3,7 @@
 #include "global.h"
 #include "common/time.h"
 
-#define USE_TASK_STATISTICS
+//#define USE_TASK_STATISTICS
 
 #if defined(USE_TASK_STATISTICS)
 #define TASK_STATS_MOVING_SUM_COUNT 32

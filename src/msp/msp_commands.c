@@ -73,7 +73,7 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
 
         taskInfo_t taskInfo;
         getTaskInfo(TASK_LOOP, &taskInfo);
-        sbufWriteU16(dst, taskInfo.averageDeltaTimeUs);
+        sbufWriteU16(dst, taskInfo.latestDeltaTimeUs);
         sbufWriteU16(dst, 0); // i2c errors
         //gyro,range,gps,mag,baro,acc
         bool gyro = true;
@@ -94,7 +94,7 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         } else {  // MSP_STATUS
             taskInfo_t taskInfoGyro;
             getTaskInfo(TASK_LOOP, &taskInfoGyro);
-            sbufWriteU16(dst, taskInfoGyro.averageDeltaTimeUs);
+            sbufWriteU16(dst, taskInfoGyro.latestDeltaTimeUs);
             sbufWriteU16(dst, 0); // gyro cycle time
         }
 
