@@ -19,7 +19,7 @@ void samd20j18_pins_initialize(void) {
 
     //port_pin_set_output_level(PIN_PA24, true);
 
-    pinmux[ARM_LED] = PIN_PA28; //LED_GRUEN
-    pinmux[CALIBRATION_LED] = PIN_PB02; //LED_GELB
-    pinmux[ERROR_LED] = PIN_PA24; //LED_ROT
+    pinmux[ARM_LED] = PIN_PA24; //LED_GRUEN
+    pinmux[CALIBRATION_LED] = PIN_PA28; //LED_GELB
+    pinmux[ERROR_LED] = PIN_PB02;//PIN_PA28; //LED_ROT
 }
