@@ -115,7 +115,7 @@ void getTaskInfo(taskId_e taskId, taskInfo_t * taskInfo) {
 task_t* getTaskQueueAt(uint8_t pos) {
     return taskQueueArray[pos];
 }
-#define GYRO_TASK_GUARD_INTERVAL_US 100
+#define GYRO_TASK_GUARD_INTERVAL_US 500
 
 void scheduler(void) {
     const timeUs_t schedulerStartTimeUs = micros();
@@ -132,6 +132,9 @@ void scheduler(void) {
         for (task_t *task = queueFirst(); task != NULL; task = queueNext()) {
             // Select Task if time is expired
             currentTimeUs = micros();
+//            if(task->taskFunc == getTask(TASK_ATTITUDE)->taskFunc && loopTaskDelayUs < 1000){ //Prevent Running the att task if not enogth time left
+//                continue;
+//            }
             if (cmpTimeUs(currentTimeUs, task->lastExecutedAtUs) >= task->desiredPeriodUs) {
                 selectedTask = task;
                 break;

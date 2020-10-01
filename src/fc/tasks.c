@@ -77,12 +77,37 @@ static void taskRx(timeUs_t currentTimeUs) {
     } else {
         fcStatus->ARMED = false;
     }
+    if (fcControl->rx.chan[AUX2] > 1600) {
+            fcStatus->ANGLE = true;
+        } else {
+            fcStatus->ANGLE = false;
+        }
 
 }
 static void taskHandleSerial(timeUs_t currentTimeUs) {
     processMSP();
 }
+static void taskAttitude(timeUs_t currentTimeUs) {
+    sensors->acc.readFn(&sensors->acc);
 
+    updateACC(currentTimeUs);
+
+    // update attitude make sure data in gyro.data[.] is in degree/s and acc.data[.] is in G
+    updateEstimatedAttitude(currentTimeUs);
+
+    if (fcStatus->ANGLE) {
+       // attitude controller
+       fcControl->attitude_command.axis[ROLL] = fcControl->fc_command.roll;
+       fcControl->attitude_command.axis[PITCH] = fcControl->fc_command.pitch;
+       fcControl->attitude_command.axis[YAW] = fcControl->fc_command.yaw;
+       //printf("%d %d,%d,%d  %d\n", fcStatus->ARMED, fcControl->attitude_command.axis[ROLL], fcControl->attitude_command.axis[PITCH], fcControl->attitude_command.axis[YAW], fcControl->fc_command.throttle);
+       updateAttitudeController(fcControl, fcConfig, currentTimeUs, &attitude);
+    } else {
+       fcControl->rate_command.axis[ROLL] = fcControl->fc_command.roll;
+       fcControl->rate_command.axis[PITCH] = fcControl->fc_command.pitch;
+       fcControl->rate_command.axis[YAW] = fcControl->fc_command.yaw;
+    }
+}
 static void taskLoop(timeUs_t currentTimeUs) {
     //Timeout 500ms
     if (cmpTimeUs(currentTimeUs, fcControl->rx.lastReceived) > fcConfig->ARM_TIMEOUT_US) {
@@ -116,28 +141,6 @@ static void taskLoop(timeUs_t currentTimeUs) {
 #endif
 
 }
-static void taskAttitude(timeUs_t currentTimeUs) {
-    sensors->acc.readFn(&sensors->acc);
-
-    updateACC(currentTimeUs);
-
-    // update attitude make sure data in gyro.data[.] is in degree/s and acc.data[.] is in G
-    updateEstimatedAttitude(currentTimeUs);
-
-    if (fcStatus->ANGLE) {
-        // attitude controller
-        fcControl->attitude_command.axis[ROLL] = fcControl->fc_command.roll;
-        fcControl->attitude_command.axis[PITCH] = fcControl->fc_command.pitch;
-        fcControl->attitude_command.axis[YAW] = fcControl->fc_command.yaw;
-        //printf("%d %d,%d,%d  %d\n", fcStatus->ARMED, fcControl->attitude_command.axis[ROLL], fcControl->attitude_command.axis[PITCH], fcControl->attitude_command.axis[YAW], fcControl->fc_command.throttle);
-        updateAttitudeController(fcControl, fcConfig, currentTimeUs, &attitude);
-    } else {
-        fcControl->rate_command.axis[ROLL] = fcControl->fc_command.roll;
-        fcControl->rate_command.axis[PITCH] = fcControl->fc_command.pitch;
-        fcControl->rate_command.axis[YAW] = fcControl->fc_command.yaw;
-    }
-
-}
 
 static task_t tasks[TASK_COUNT] = {
     [TASK_DEBUG] = {
@@ -153,7 +156,7 @@ static task_t tasks[TASK_COUNT] = {
     [TASK_ATTITUDE] = {
         .taskName = "TASK_ATTITUDE",
         .taskFunc = taskAttitude,
-        .staticPriority = 2,
+        .staticPriority = 100,
         .desiredPeriodUs = TASK_PERIOD_HZ(TARGET_LOOP_HZ/2), },
     [TASK_RX] = {
         .taskName = "TASK_RX",
@@ -169,7 +172,7 @@ static task_t tasks[TASK_COUNT] = {
         .taskName = "TASK_SERIAL",
         .taskFunc = taskHandleSerial,
         .staticPriority = 4,
-        .desiredPeriodUs = TASK_PERIOD_HZ(100), },
+        .desiredPeriodUs = TASK_PERIOD_HZ(TARGET_LOOP_HZ/2), },
     [TASK_LOOP] = {
         .taskName = "TASK_LOOP",
         .taskFunc = taskLoop,

@@ -172,7 +172,7 @@ static void taskJoy(timeUs_t currentTimeUs) {
     sbufWriteU16(&buf, rx_joy.yaw);
     sbufWriteU16(&buf, rx_joy.throttle);
     sbufWriteU16(&buf, rx_joy.arm);
-    sbufWriteU16(&buf, 1000);  // Todo wenn hier 5 gehts ned was macht liux da
+    sbufWriteU16(&buf, 2000);  // Todo wenn hier 5 gehts ned was macht liux da
 
     sbufSwitchToReader(&buf, &data[0]);
     //printf("roll %6d, pitch %6d, yaw %6d, thrust %6d, arm %d \n", rx_joy.roll, rx_joy.pitch, rx_joy.yaw, rx_joy.throttle, rx_joy.arm);
@@ -201,6 +201,11 @@ static void taskLoop(timeUs_t currentTimeUs) {
 
 static task_t tasks[TASK_COUNT] = {
     [TASK_LOOP] = { //Needed RealTime Task (in firmware main gyro looptime)
+        .taskName = "TASK_LOOP",
+        .taskFunc = taskLoop,
+        .staticPriority = 200,
+        .desiredPeriodUs = 100000000, },
+    [TASK_ATTITUDE] = { //Needed RealTime Task (in firmware main gyro looptime)
         .taskName = "TASK_LOOP",
         .taskFunc = taskLoop,
         .staticPriority = 200,

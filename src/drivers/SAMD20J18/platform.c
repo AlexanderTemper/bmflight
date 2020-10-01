@@ -48,7 +48,7 @@ static bool bma280Read(accDev_t *acc) {
     if (bma2x2_read_accel_xyz(&rawData) != 0) {
         return false;
     }
-    acc->ADCRaw[X] = SinFunction(micros());//rawData.x;
+    acc->ADCRaw[X] = rawData.x;//SinFunction(micros());//rawData.x;
     acc->ADCRaw[Y] = rawData.y;
     acc->ADCRaw[Z] = rawData.z;
     acc->lastReadTime = micros();

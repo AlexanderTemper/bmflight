@@ -44,6 +44,9 @@
 #define BLACKBOX_ACC_ENABLE
 #define BLACKBOX_MOTOR_ENABLE
 
+#define BLACKBOX_DEBUG_TIMING
+#define BLACKBOX_DEBUG_TIMING_ALL
+
 #define DEFAULT_BLACKBOX_DEVICE  BLACKBOX_DEVICE_NONE
 // number of flight loop iterations before logging I-frame
 static int16_t blackboxIInterval = 0;
@@ -103,7 +106,9 @@ typedef struct blackboxMainState_s {
 #ifdef BLACKBOX_MOTOR_ENABLE
     int16_t motor[4];
 #endif
-    int32_t debug[4];
+#ifdef BLACKBOX_DEBUG_TIMING
+    int32_t debugTiming[8];
+#endif
 } blackboxMainState_t;
 
 // Keep a history of length 2, plus a buffer for MW to store the new values into
@@ -129,7 +134,12 @@ static const uint8_t headerNamePart2[] =
 #ifdef BLACKBOX_ACC_ENABLE
         ",accSmooth[0],accSmooth[1],accSmooth[2]"
 #endif
+#ifdef BLACKBOX_DEBUG_TIMING
         ",debug[0],debug[1],debug[2],debug[3]"
+#endif
+#ifdef BLACKBOX_DEBUG_TIMING_ALL
+        ",debug[4],debug[5],debug[6],debug[7]"
+#endif
 #ifdef BLACKBOX_RC_COMMAND_ENABLE
         ",rcCommand[0],rcCommand[1],rcCommand[2],rcCommand[3]"
 #endif
@@ -149,7 +159,9 @@ static const uint8_t headerSigned[] = "H Field I signed:0,0"
 #ifdef BLACKBOX_ACC_ENABLE
         ",1,1,1" //accSmooth
 #endif
-        ",1,1,1,1" //debug
+#ifdef BLACKBOX_DEBUG_TIMING
+        ",1,1,1,1" //debug timing
+#endif
 #ifdef BLACKBOX_RC_COMMAND_ENABLE
         ",1,1,1,0" //rcCommand
 #endif
@@ -171,7 +183,12 @@ static const uint8_t headerPredictor[] = "H Field I predictor:0,0"
 #ifdef BLACKBOX_ACC_ENABLE
         ",0,0,0" //accSmooth
 #endif
-        ",0,0,0,0" //debug
+#ifdef BLACKBOX_DEBUG_TIMING
+        ",0,0,0,0" //debug timing
+#endif
+#ifdef BLACKBOX_DEBUG_TIMING_ALL
+        ",0,0,0,0" //debug timing
+#endif
 #ifdef BLACKBOX_RC_COMMAND_ENABLE
         ",0,0,0,0" //rcCommand
 #endif
@@ -192,7 +209,12 @@ static const uint8_t headerEncoding[] = "H Field I encoding:1,1"
 #ifdef BLACKBOX_ACC_ENABLE
         ",0,0,0" //accSmooth
 #endif
-        ",0,0,0,0" //debug
+#ifdef BLACKBOX_DEBUG_TIMING
+        ",0,0,0,0" //debug timing
+#endif
+#ifdef BLACKBOX_DEBUG_TIMING_ALL
+        ",0,0,0,0" //debug timing
+#endif
 #ifdef BLACKBOX_RC_COMMAND_ENABLE
         ",0,0,0,1" //rcCommand
 #endif
@@ -216,7 +238,12 @@ static const uint8_t pHeaderPredictor[] = "H Field P predictor:6,2"
 #ifdef BLACKBOX_ACC_ENABLE
         ",3,3,3" //accSmooth
 #endif
+#ifdef BLACKBOX_DEBUG_TIMING
         ",1,1,1,1" //debug
+#endif
+#ifdef BLACKBOX_DEBUG_TIMING_ALL
+        ",1,1,1,1" //debug
+#endif
 #ifdef BLACKBOX_RC_COMMAND_ENABLE
         ",1,1,1,1" //rcCommand
 #endif
@@ -239,7 +266,12 @@ static const uint8_t pHheaderEncoding[] = "H Field P encoding:9,0"
 #ifdef BLACKBOX_ACC_ENABLE
         ",0,0,0" //accSmooth
 #endif
+#ifdef BLACKBOX_DEBUG_TIMING
         ",0,0,0,0" //debug
+#endif
+#ifdef BLACKBOX_DEBUG_TIMING_ALL
+        ",0,0,0,0" //debug
+#endif
 #ifdef BLACKBOX_RC_COMMAND_ENABLE
         ",8,8,8,8" //rcCommand
 #endif
@@ -472,19 +504,28 @@ static void loadMainState(timeUs_t currentTimeUs) {
     blackboxCurrent->rcCommand[THROTTLE] = fcCommand->throttle;
 #endif
 
+#ifdef BLACKBOX_DEBUG_TIMING
 #ifdef USE_TASK_STATISTICS
     task_t * loopTask = getTask(TASK_LOOP);
     task_t * attTask = getTask(TASK_ATTITUDE);
-    blackboxCurrent->debug[0] = loopTask->taskLatestDeltaTimeUs;
-    blackboxCurrent->debug[1] = loopTask->movingSumExecutionTimeUs / TASK_STATS_MOVING_SUM_COUNT;
-    blackboxCurrent->debug[2] = attTask->taskLatestDeltaTimeUs;
-    blackboxCurrent->debug[3] = attTask->movingSumExecutionTimeUs / TASK_STATS_MOVING_SUM_COUNT;
-#else
-    blackboxCurrent->debug[0] = -25;
-    blackboxCurrent->debug[1] = -25;
-    blackboxCurrent->debug[2] = -25;
-    blackboxCurrent->debug[3] = -25;
+    blackboxCurrent->debugTiming[0] = loopTask->taskLatestDeltaTimeUs;
+    blackboxCurrent->debugTiming[1] = attTask->taskLatestDeltaTimeUs;
+    blackboxCurrent->debugTiming[2] = loopTask->movingSumExecutionTimeUs / TASK_STATS_MOVING_SUM_COUNT;
+    blackboxCurrent->debugTiming[3] = attTask->movingSumExecutionTimeUs / TASK_STATS_MOVING_SUM_COUNT;
 #endif
+#endif
+
+#ifdef BLACKBOX_DEBUG_TIMING_ALL
+#ifdef USE_TASK_STATISTICS
+    task_t * task1 = getTask(TASK_SERIAL);
+    task_t * task2 = getTask(TASK_SYSTEM);
+    blackboxCurrent->debugTiming[4] = task1->taskLatestDeltaTimeUs;
+    blackboxCurrent->debugTiming[5] = task2->taskLatestDeltaTimeUs;
+    blackboxCurrent->debugTiming[6] = task1->movingSumExecutionTimeUs / TASK_STATS_MOVING_SUM_COUNT;
+    blackboxCurrent->debugTiming[7] = task2->movingSumExecutionTimeUs / TASK_STATS_MOVING_SUM_COUNT;
+#endif
+#endif
+
 #ifdef BLACKBOX_MOTOR_ENABLE
     // motor
     motors_command_t * motorCommand = &getFcControl()->motor_command;
@@ -541,13 +582,20 @@ static void writeIFrame(void) {
     blackboxWriteSignedVB(blackboxCurrent->accADC[Y]);
     blackboxWriteSignedVB(blackboxCurrent->accADC[Z]);
 #endif
-
+#ifdef BLACKBOX_DEBUG_TIMING
     // debug
-    blackboxWriteSignedVB(blackboxCurrent->debug[0]);
-    blackboxWriteSignedVB(blackboxCurrent->debug[1]);
-    blackboxWriteSignedVB(blackboxCurrent->debug[2]);
-    blackboxWriteSignedVB(blackboxCurrent->debug[3]);
-
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[0]);
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[1]);
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[2]);
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[3]);
+#endif
+#ifdef BLACKBOX_DEBUG_TIMING_ALL
+    // debug
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[4]);
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[5]);
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[6]);
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[7]);
+#endif
 #ifdef BLACKBOX_RC_COMMAND_ENABLE
     // rcCommand
     blackboxWriteSignedVB(blackboxCurrent->rcCommand[ROLL]);
@@ -614,12 +662,20 @@ static void writePFrame(void) {
 #ifdef BLACKBOX_ACC_ENABLE
     blackboxWriteMainStateArrayUsingAveragePredictor(offsetof(blackboxMainState_t, accADC), XYZ_AXIS_COUNT);
 #endif
+#ifdef BLACKBOX_DEBUG_TIMING
     //debug
-    blackboxWriteSignedVB(blackboxCurrent->debug[0] - blackboxLast->debug[0]);
-    blackboxWriteSignedVB(blackboxCurrent->debug[1] - blackboxLast->debug[1]);
-    blackboxWriteSignedVB(blackboxCurrent->debug[2] - blackboxLast->debug[2]);
-    blackboxWriteSignedVB(blackboxCurrent->debug[3] - blackboxLast->debug[3]);
-
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[0] - blackboxLast->debugTiming[0]);
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[1] - blackboxLast->debugTiming[1]);
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[2] - blackboxLast->debugTiming[2]);
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[3] - blackboxLast->debugTiming[3]);
+#endif
+#ifdef BLACKBOX_DEBUG_TIMING_ALL
+    //debug
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[4] - blackboxLast->debugTiming[4]);
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[5] - blackboxLast->debugTiming[5]);
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[6] - blackboxLast->debugTiming[6]);
+    blackboxWriteSignedVB(blackboxCurrent->debugTiming[7] - blackboxLast->debugTiming[7]);
+#endif
 #ifdef BLACKBOX_RC_COMMAND_ENABLE
     int32_t deltas[4];
     for (int x = 0; x < 4; x++) {
