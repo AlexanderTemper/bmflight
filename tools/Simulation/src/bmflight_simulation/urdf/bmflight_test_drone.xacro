@@ -63,7 +63,7 @@ for Quadrocopter Control by Jian Wang et al.) -->
     motor_number="1"
     rotor_drag_coefficient="${rotor_drag_coefficient}"
     rolling_moment_coefficient="${rolling_moment_coefficient}"
-    color="Red"
+    color="Blue"
     use_own_mesh="false"
     mesh="">
     <origin xyz="${arm_length_x} -${arm_length_y} ${rotor_offset_top}" rpy="0 0 0" />
@@ -129,7 +129,7 @@ for Quadrocopter Control by Jian Wang et al.) -->
     motor_number="0"
     rotor_drag_coefficient="${rotor_drag_coefficient}"
     rolling_moment_coefficient="${rolling_moment_coefficient}"
-    color="Blue"
+    color="Red"
     use_own_mesh="false"
     mesh="">
     <origin xyz="-${arm_length_x} -${arm_length_y} ${rotor_offset_top}" rpy="0 0 0" />
