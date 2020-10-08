@@ -76,7 +76,7 @@ void updateMotors(void) {
     status_t *status = getFcStatus();
 
     for (i = 0; i < 4; i++) {
-        motors_System->value[i] = command_System->throttle * currentMixer[i].throttle + mixer_System->axis[PITCH] * currentMixer[i].pitch + mixer_System->axis[ROLL] * currentMixer[i].roll + -config->YAW_DIRECTION * mixer_System->axis[YAW] * currentMixer[i].yaw;
+        motors_System->value[i] = command_System->throttle * currentMixer[i].throttle + mixer_System->axis[PITCH] * currentMixer[i].pitch + mixer_System->axis[ROLL] * currentMixer[i].roll + config->YAW_DIRECTION * mixer_System->axis[YAW] * currentMixer[i].yaw;
     }
 
     // get max motor value

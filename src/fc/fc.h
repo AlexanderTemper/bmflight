@@ -36,7 +36,7 @@ typedef struct config_s {
     int16_t MIDRC;
     int16_t MINCHECK;
     int16_t MAXCHECK;
-    uint8_t YAW_DIRECTION;
+    int8_t YAW_DIRECTION;
     int16_t ACC_TRIM[XYZ_AXIS_COUNT];
     int32_t ARM_TIMEOUT_US;
     uint8_t MAX_ARMING_ANGLE;

@@ -115,9 +115,42 @@ void getTaskInfo(taskId_e taskId, taskInfo_t * taskInfo) {
 task_t* getTaskQueueAt(uint8_t pos) {
     return taskQueueArray[pos];
 }
-#define GYRO_TASK_GUARD_INTERVAL_US 500
+#define GYRO_TASK_GUARD_INTERVAL_US 400
 
+static void TimeSliceScedular(void){
+    static bool attPeriod = true;
+    const timeUs_t schedulerStartTimeUs = micros();
+        timeUs_t currentTimeUs = schedulerStartTimeUs;
+        task_t *selectedTask = NULL;
+        //printf("start was %d \t", currentTimeUs);
+
+        task_t* loopTask = getTask(TASK_LOOP);
+        const timeUs_t nextLoopTaskTime = loopTask->lastExecutedAtUs + loopTask->desiredPeriodUs;
+        const timeDelta_t loopTaskDelayUs = cmpTimeUs(nextLoopTaskTime, currentTimeUs);  // time until the next expected gyro sample
+
+
+        if (loopTaskDelayUs <= 0) { //select gyro Task
+            schedulerExecuteTask(loopTask, currentTimeUs);
+            if(attPeriod){
+                schedulerExecuteTask(getTask(TASK_ATTITUDE), currentTimeUs);
+            } else {
+                schedulerExecuteTask(getTask(TASK_SERIAL), currentTimeUs);
+                schedulerExecuteTask(getTask(TASK_RX), currentTimeUs);
+//                //execute all other Task if needed
+//                for (task_t *task = queueFirst(); task != NULL; task = queueNext()) {
+//                    // Select Task if time is expired
+//                    currentTimeUs = micros();
+//                    if (cmpTimeUs(currentTimeUs, task->lastExecutedAtUs) >= task->desiredPeriodUs) {
+//                        schedulerExecuteTask(task, currentTimeUs);
+//                    }
+//                }
+            }
+            attPeriod = !attPeriod;
+
+        }
+}
 void scheduler(void) {
+    //return TimeSliceScedular();
     const timeUs_t schedulerStartTimeUs = micros();
     timeUs_t currentTimeUs = schedulerStartTimeUs;
     task_t *selectedTask = NULL;
@@ -132,9 +165,9 @@ void scheduler(void) {
         for (task_t *task = queueFirst(); task != NULL; task = queueNext()) {
             // Select Task if time is expired
             currentTimeUs = micros();
-//            if(task->taskFunc == getTask(TASK_ATTITUDE)->taskFunc && loopTaskDelayUs < 1000){ //Prevent Running the att task if not enogth time left
-//                continue;
-//            }
+            if(task->taskFunc == getTask(TASK_ATTITUDE)->taskFunc && loopTaskDelayUs < 1000){ //Prevent Running the att task if not enogth time left
+                continue;
+            }
             if (cmpTimeUs(currentTimeUs, task->lastExecutedAtUs) >= task->desiredPeriodUs) {
                 selectedTask = task;
                 break;

@@ -72,6 +72,7 @@ static void taskRx(timeUs_t currentTimeUs) {
     fcControl->fc_command.yaw = fcControl->rx.chan[YAW] - fcConfig->MIDRC;
     fcControl->fc_command.throttle = fcControl->rx.chan[THROTTLE];
 
+    //todo max check
     if (fcControl->rx.chan[AUX1] > 1600) {
         fcStatus->ARMED = true;
     } else {
