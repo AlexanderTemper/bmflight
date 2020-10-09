@@ -226,18 +226,22 @@ static int16_t recFunction(timeUs_t currentTime) {
 
 static int16_t SinFunction(timeUs_t currentTime) {
 #define SIN_PERIOD 50000 //120Hz
-    float omega = 2*M_PIf/SIN_PERIOD;
-    int periods = currentTime /SIN_PERIOD;
+    float omega = 2 * M_PIf / SIN_PERIOD;
+    int periods = currentTime / SIN_PERIOD;
     uint32_t time = currentTime - periods * SIN_PERIOD;
-    return 4000 * sin_approx(omega*time);
+    return 4000 * sin_approx(omega * time);
 }
 int16_t accfake = -8192;
 static bool acc_simRead(accDev_t *acc) {
     pthread_mutex_lock(&udpLock);
 
-    acc->ADCRaw[X] = SinFunction(micros()); //lastSimPkt.imu_linear_acceleration_xyz[X];
-    acc->ADCRaw[Y] = accfake++; //lastSimPkt.imu_linear_acceleration_xyz[Y];
-    acc->ADCRaw[Z] = -8192; //lastSimPkt.imu_linear_acceleration_xyz[Z];
+//    acc->ADCRaw[X] = SinFunction(micros()); //lastSimPkt.imu_linear_acceleration_xyz[X];
+//    acc->ADCRaw[Y] = accfake++; //lastSimPkt.imu_linear_acceleration_xyz[Y];
+//    acc->ADCRaw[Z] = -8192; //lastSimPkt.imu_linear_acceleration_xyz[Z];
+
+    acc->ADCRaw[X] = lastSimPkt.imu_linear_acceleration_xyz[X];
+    acc->ADCRaw[Y] = lastSimPkt.imu_linear_acceleration_xyz[Y];
+    acc->ADCRaw[Z] = lastSimPkt.imu_linear_acceleration_xyz[Z];
     acc->lastReadTime = lastSimPkt.timestamp * 1000000;
 
     pthread_mutex_unlock(&udpLock);
@@ -250,9 +254,13 @@ static bool gyro_simRead(gyroDev_t *gyro) {
 
     pthread_mutex_lock(&udpLock);
 
-    gyro->raw[X] = recFunction(micros()); //lastSimPkt.imu_angular_velocity_rpy[X];
-    gyro->raw[Y] = fake++; //lastSimPkt.imu_angular_velocity_rpy[Y];
-    gyro->raw[Z] = 0;//SinFunction(micros()); //lastSimPkt.imu_angular_velocity_rpy[Z];
+//    gyro->raw[X] = recFunction(micros()); //lastSimPkt.imu_angular_velocity_rpy[X];
+//    gyro->raw[Y] = fake++; //lastSimPkt.imu_angular_velocity_rpy[Y];
+//    gyro->raw[Z] = 0;//SinFunction(micros()); //lastSimPkt.imu_angular_velocity_rpy[Z];
+
+    gyro->raw[X] = lastSimPkt.imu_angular_velocity_rpy[X];
+    gyro->raw[Y] = lastSimPkt.imu_angular_velocity_rpy[Y];
+    gyro->raw[Z] = -lastSimPkt.imu_angular_velocity_rpy[Z];
 
     gyro->lastReadTime = lastSimPkt.timestamp * 1000000;
 
@@ -274,8 +282,8 @@ static void motor_write_sim(motors_command_t *motors) {
 
 static void setPin(status_leds_e pinId, bool level) {
     pins[pinId] = level;
-   // printf("pin Update [%c][%c][%c]\r", pins[ARM_LED] ? 'X' : ' ', pins[CALIBRATION_LED] ? 'X' : ' ', pins[ERROR_LED] ? 'X' : ' ');
-   // fflush(stdout);
+    // printf("pin Update [%c][%c][%c]\r", pins[ARM_LED] ? 'X' : ' ', pins[CALIBRATION_LED] ? 'X' : ' ', pins[ERROR_LED] ? 'X' : ' ');
+    // fflush(stdout);
 }
 /***************************************************************
  *

@@ -155,24 +155,24 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
 int armedFake = true;
 int wobbleFake = 1000;
 static void taskJoy(timeUs_t currentTimeUs) {
-    //readJoy();
+    readJoy();
     uint8_t data[12];
     sbuf_t buf;
     sbufInit(&buf, &data[0], &data[11]);
 
-    rx_joy.arm = 1000;
-    rx_joy.roll = 1500;
-    rx_joy.pitch = 1500;
-    rx_joy.yaw = 1500;
-    rx_joy.throttle = (wobbleFake += 10) % 1000 + 1000;
-    rx_joy.arm = armedFake ? 2000 : 1000;
+//    rx_joy.arm = 1000;
+//    rx_joy.roll = 1500;
+//    rx_joy.pitch = 1500;
+//    rx_joy.yaw = 1500;
+//    rx_joy.throttle = (wobbleFake += 10) % 1000 + 1000;
+//    rx_joy.arm = armedFake ? 2000 : 1000;
 
     sbufWriteU16(&buf, rx_joy.roll);
     sbufWriteU16(&buf, rx_joy.pitch);
     sbufWriteU16(&buf, rx_joy.yaw);
     sbufWriteU16(&buf, rx_joy.throttle);
     sbufWriteU16(&buf, rx_joy.arm);
-    sbufWriteU16(&buf, 2000);  // Todo wenn hier 5 gehts ned was macht liux da
+    sbufWriteU16(&buf, 1);  // Todo wenn hier 5 gehts ned was macht liux da
 
     sbufSwitchToReader(&buf, &data[0]);
     //printf("roll %6d, pitch %6d, yaw %6d, thrust %6d, arm %d \n", rx_joy.roll, rx_joy.pitch, rx_joy.yaw, rx_joy.throttle, rx_joy.arm);
