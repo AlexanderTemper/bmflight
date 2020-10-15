@@ -72,8 +72,12 @@ bool accIsCalibrationComplete(void) {
  * @param currentTimeUs
  */
 void updateACC(timeUs_t currentTimeUs) {
+    sensors->acc.readFn(&sensors->acc);
     if (!accIsCalibrationComplete()) {
         performAcclerationCalibration();
+        sensors->acc.data[X] = 0.0f;
+        sensors->acc.data[Y] = 0.0f;
+        sensors->acc.data[Z] = 0.0f;
         return;
     }
 

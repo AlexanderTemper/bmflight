@@ -28,6 +28,7 @@ static int write_tcp_imp(uint8_t *data, int len) {
     }
     return status;
 }
+
 static void write_tcp(void) {
     serialPort_t *instance = serialPort;
 
@@ -107,6 +108,7 @@ void tcp_serialWrite(serialPort_t *instance, uint8_t ch) {
     pthread_mutex_unlock(&tcpSerialPort->txLock);
     write_tcp();
 }
+
 uint8_t tcp_serialRead(serialPort_t *instance) {
     read_tcp();
     uint8_t ch;
@@ -121,6 +123,7 @@ uint8_t tcp_serialRead(serialPort_t *instance) {
 
     return ch;
 }
+
 uint32_t tcp_serialTotalRxWaiting(const serialPort_t *instance) {
     read_tcp();
     int32_t count;
@@ -134,6 +137,7 @@ uint32_t tcp_serialTotalRxWaiting(const serialPort_t *instance) {
 
     return count;
 }
+
 uint32_t tcp_serialTotalTxFree(const serialPort_t *instance) {
     uint32_t bytesUsed;
     pthread_mutex_lock(&tcpSerialPort->txLock);
@@ -146,6 +150,7 @@ uint32_t tcp_serialTotalTxFree(const serialPort_t *instance) {
     pthread_mutex_unlock(&tcpSerialPort->txLock);
     return bytesFree;
 }
+
 bool tcp_isSerialTransmitBufferEmpty(const serialPort_t *instance) {
     pthread_mutex_lock(&tcpSerialPort->txLock);
     bool isEmpty = instance->txBufferTail == instance->txBufferHead;
@@ -156,11 +161,12 @@ bool tcp_isSerialTransmitBufferEmpty(const serialPort_t *instance) {
 void tcp_beginWrite(serialPort_t *instance) {
 
 }
+
 void tcp_endWrite(serialPort_t *instance) {
 
 }
 
-void tcp_initialize_client(tcpPort_t *s) {
+void tcp_initialize_client(tcpPort_t *s, const char * address) {
 
     if (pthread_mutex_init(&s->txLock, NULL) != 0) {
         fprintf(stderr, "TX mutex init failed - %d\n", errno);
@@ -181,7 +187,7 @@ void tcp_initialize_client(tcpPort_t *s) {
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(BASE_PORT);
 
-    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
+    if (inet_pton(AF_INET, address, &serv_addr.sin_addr) <= 0) {
         printf("\n inet_pton error occured\n");
         exit(1);
     }
@@ -201,7 +207,8 @@ void tcp_initialize_client(tcpPort_t *s) {
         // handle the error.  By the way, I've never seen fcntl fail in this way
     }
 }
-void tcp_initialize_server(tcpPort_t *s) {
+
+void tcp_initialize_server(tcpPort_t *s, const char * address) {
     if (pthread_mutex_init(&s->txLock, NULL) != 0) {
         fprintf(stderr, "TX mutex init failed - %d\n", errno);
         exit(1);
@@ -219,7 +226,7 @@ void tcp_initialize_server(tcpPort_t *s) {
     memset(&serv_addr, '0', sizeof(serv_addr));
 
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    serv_addr.sin_addr.s_addr = inet_addr(address);
     serv_addr.sin_port = htons(BASE_PORT);
 
     int enable = 1;
@@ -238,6 +245,7 @@ void tcp_initialize_server(tcpPort_t *s) {
         exit(1);
     }
 }
+
 void tcp_serial_initialize(serialPort_t *instance, tcpPort_t *stcpPort) {
     serialPort = instance;
     tcpSerialPort = stcpPort;

@@ -89,8 +89,6 @@ static void taskHandleSerial(timeUs_t currentTimeUs) {
     processMSP();
 }
 static void taskAttitude(timeUs_t currentTimeUs) {
-    sensors->acc.readFn(&sensors->acc);
-
     updateACC(currentTimeUs);
 
     // update attitude make sure data in gyro.data[.] is in degree/s and acc.data[.] is in G

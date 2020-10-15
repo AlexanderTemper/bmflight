@@ -27,8 +27,8 @@ typedef void (*writeCallbackFuncPtr)(void);
 typedef void (*readCallbackFuncPtr)(uint8_t data);
 
 void tcp_serial_initialize(serialPort_t *instance, tcpPort_t *stcpPort);
-void tcp_initialize_server(tcpPort_t *s);
-void tcp_initialize_client(tcpPort_t *s);
+void tcp_initialize_server(tcpPort_t *s, const char * address);
+void tcp_initialize_client(tcpPort_t *s, const char * address);
 
 void tcp_serialWrite(serialPort_t *instance, uint8_t ch);
 uint8_t tcp_serialRead(serialPort_t *instance);

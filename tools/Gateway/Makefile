@@ -54,6 +54,8 @@ CFLAGS += -DEBUG -O0 -g3 -gdwarf-2
 INC_PATH := \
 	$(FC_SRC_DIR)src \
 
+CFLAGS = \
+   -D FC_TARGET_SITL
 	
 # Files to build for source
 CSRCS := \

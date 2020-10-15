@@ -30,6 +30,7 @@ timeUs_t micros(void) {
     return microsFuncPtr();
 }
 
+#ifdef FC_TARGET_SITL
 /**
  * delay the the execution
  * @param nsec to delay the execution
@@ -37,3 +38,4 @@ timeUs_t micros(void) {
 void delayNanoSeconds(uint32_t nsec) {
     delayNanoSecondsFuncPtr(nsec);
 }
+#endif

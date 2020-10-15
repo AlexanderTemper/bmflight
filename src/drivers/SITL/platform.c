@@ -329,7 +329,7 @@ void platform_initialize(void) {
     printf("[system]Init...\n");
 
     initTime(&sitl_millis, &sitl_micros, &sitl_delayNanoSeconds);
-    tcp_initialize_server(&tcpSerialPort); //setup tcp Port
+    tcp_initialize_server(&tcpSerialPort, "127.0.0.1"); //setup tcp Port
 
     int ret = pthread_create(&tcpWorker, NULL, tcpThread, NULL);
     if (ret != 0) {

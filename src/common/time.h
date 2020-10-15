@@ -38,8 +38,10 @@ timeMs_t millis(void);
  */
 timeUs_t micros(void);
 
+#ifdef FC_TARGET_SITL
 /**
  * delay the the execution
  * @param nsec to delay the execution
  */
 void delayNanoSeconds(uint32_t nsec);
+#endif

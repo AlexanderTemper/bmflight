@@ -39,10 +39,10 @@
 #include "common/maths.h"
 #include "common/debug.h"
 
-//#define BLACKBOX_PID_ENABLE
-//#define BLACKBOX_RC_COMMAND_ENABLE
-//#define BLACKBOX_ACC_ENABLE
-//#define BLACKBOX_MOTOR_ENABLE
+#define BLACKBOX_PID_ENABLE
+#define BLACKBOX_RC_COMMAND_ENABLE
+#define BLACKBOX_ACC_ENABLE
+#define BLACKBOX_MOTOR_ENABLE
 
 #define BLACKBOX_DEBUG_TIMING
 #define BLACKBOX_DEBUG_TIMING_ALL

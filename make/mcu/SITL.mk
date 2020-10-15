@@ -22,5 +22,8 @@ CSRCS += \
 	src/drivers/SITL/platform.c    \
 	src/drivers/SITL/udplink.c
 	
+CFLAGS = \
+   -D FC_TARGET_SITL
+	
 	
 LDFLAGS += -lm -lpthread -lc -lrt

@@ -143,11 +143,11 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
         break;
     }
     case MSP_BLACKBOX_STOP: {
-        printf("Logger stoped\n");
+        printf("Logger stopped\n");
         break;
     }
     default:
-        printf("WATT??\n");
+        printf("Unknown msp package");
         break;
     }
 }
@@ -279,11 +279,12 @@ int main(int argc, char *argv[]) {
         }
         uart = true;
 
-    } else if (argc == 2 && !strcmp(argv[1], "tcp")) {
-        tcp_initialize_client(&tcpSerialPort); //setup tcp Port
+    } else if (argc == 3 && !strcmp(argv[1], "tcp")) {
+
+        tcp_initialize_client(&tcpSerialPort, argv[2]); //setup tcp Port
         initialize_tcp_serial();
     } else {
-        printf("-------- Usage --------\n    gateway [uart] [devName]\n    or\n    gateway [tcp]\n");
+        printf("-------- Usage --------\n    gateway [uart] [devName]\n    or\n    gateway [tcp] [address]\n");
         return -1;
     }
 
@@ -300,11 +301,11 @@ int main(int argc, char *argv[]) {
 
     int js = initJoy("/dev/input/js0");
 
-//    if (js == -1) {
-//        perror("Joy not connected");
-//    } else {
+    if (js == -1) {
+        perror("Joy not connected");
+    } else {
     setTaskEnabled(TASK_RX, true);
-//    }
+    }
 
     setTaskEnabled(TASK_SERIAL, true);
     setTaskEnabled(TASK_LOOP, true);

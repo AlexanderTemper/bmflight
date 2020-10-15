@@ -75,7 +75,8 @@ void updateRateController(control_t* fcControl, gyroDev_t *gyro, pid_config_t *p
     previousError[Y] = error[Y];
     previousError[Z] = error[Z];
 
-    // prevent "yaw jump" during yaw correction so the pid controller does not
+    // prevent "yaw jump" during yaw correction
+    //meint das der Copter nach oben springt wenn man sich schnell drehen will
     //int16_t absYaw =  ABS(fcControl->rate_command.axis[Z]);
     //fcControl->mixer_command.axis[YAW] = constrain(fcControl->mixer_command.axis[YAW], -100 - absYaw, +100 + absYaw);
 

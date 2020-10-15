@@ -20,7 +20,11 @@ int main(void) {
     /************************** Infinite Loop *******************************/
     while (true) {
         scheduler();
+
+#ifdef FC_TARGET_SITL
         delayNanoSeconds(50);
+#endif
+
     }
 
 }
