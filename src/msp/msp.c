@@ -67,7 +67,6 @@ static bool mspSerialProcessReceivedData(mspPort_t *mspPort, const uint8_t c) {
             } else {
                 mspPort->dataSize = mspPort->inBuf[0];
                 mspPort->cmdMSP = mspPort->inBuf[1];
-                mspPort->cmdFlags = 0;
                 mspPort->offset = 0;                // re-use buffer
                 mspPort->c_state = mspPort->dataSize > 0 ? MSP_PAYLOAD_V1 : MSP_CHECKSUM_V1;    // If no payload - jump to checksum byte
             }
@@ -182,7 +181,7 @@ static void mspSerialProcessReceivedCommand(mspPort_t *msp) {
             MSP_DIRECTION_REPLY, };
     uint8_t *outBufHead = reply.buf.ptr;
 
-    mspPacket_t command = { .buf = { .ptr = msp->inBuf, .end = msp->inBuf + msp->dataSize, }, .cmd = msp->cmdMSP, .flags = msp->cmdFlags, .result = 0,
+    mspPacket_t command = { .buf = { .ptr = msp->inBuf, .end = msp->inBuf + msp->dataSize, }, .cmd = msp->cmdMSP, .result = 0,
             .direction = MSP_DIRECTION_REQUEST, };
 
     const mspResult_e status = msp->mspProcessCommandFnPtr(&command, &reply);
@@ -193,7 +192,7 @@ static void mspSerialProcessReceivedCommand(mspPort_t *msp) {
 }
 
 static void mspSerialProcessReceivedReply(mspPort_t *msp) {
-    mspPacket_t command = { .buf = { .ptr = msp->inBuf, .end = msp->inBuf + msp->dataSize, }, .cmd = msp->cmdMSP, .flags = msp->cmdFlags, .result = 0,
+    mspPacket_t command = { .buf = { .ptr = msp->inBuf, .end = msp->inBuf + msp->dataSize, }, .cmd = msp->cmdMSP,  .result = 0,
             .direction = MSP_DIRECTION_REQUEST, };
     msp->mspProcessReplyFnPtr(&command);
 
