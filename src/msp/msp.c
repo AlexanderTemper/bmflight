@@ -29,7 +29,7 @@ static bool mspSerialProcessReceivedData(mspPort_t *mspPort, const uint8_t c) {
         }
         break;
 
-    case MSP_HEADER_START:  // Waiting for 'M' (MSPv1 / MSPv2_over_v1) or 'X' (MSPv2 native)
+    case MSP_HEADER_START:  // Waiting for 'M'
         mspPort->offset = 0;
         mspPort->checksum = 0;
         switch (c) {
@@ -177,7 +177,7 @@ void mspWriteBlackBoxData(const uint8_t* data, uint16_t len) {
 static void mspSerialProcessReceivedCommand(mspPort_t *msp) {
 
     static uint8_t outBuf[MSP_PORT_OUTBUF_SIZE];
-    mspPacket_t reply = { .buf = { .ptr = outBuf, .end = &outBuf[MSP_PORT_OUTBUF_SIZE - 1], }, .cmd = -1, .flags = 0, .result = 0, .direction =
+    mspPacket_t reply = { .buf = { .ptr = outBuf, .end = &outBuf[MSP_PORT_OUTBUF_SIZE - 1], }, .cmd = -1, .result = 0, .direction =
             MSP_DIRECTION_REPLY, };
     uint8_t *outBufHead = reply.buf.ptr;
 

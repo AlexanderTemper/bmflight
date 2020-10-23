@@ -80,9 +80,9 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         bool range = false;
         bool gps = false;
         bool mag = false;
-        bool baro = true;
+        bool baro = false;
         bool acc = true;
-        sbufWriteU16(dst, (acc | baro << 0 | mag << 2 | gps << 3 | range << 4 | gyro << 5)); //sensors
+        sbufWriteU16(dst, (acc | baro << 1 | mag << 2 | gps << 3 | range << 4 | gyro << 5)); //sensors
 
         sbufWriteU32(dst, 0); // unconditional part of flags, first 32 bits
 
@@ -122,7 +122,7 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         sbufWriteU8(dst, 0); // gyroConfig()->gyro_to_use);
         sbufWriteU8(dst, 0); //  gyroConfig()->gyro_high_fsr);
         sbufWriteU8(dst, 0); //  gyroConfig()->gyroMovementCalibrationThreshold);
-        sbufWriteU16(dst, 200); // gyroConfig()->gyroCalibrationDuration);
+        sbufWriteU16(dst, 2000); // gyroConfig()->gyroCalibrationDuration);
         sbufWriteU16(dst, 0); //  gyroConfig()->gyro_offset_yaw);
         sbufWriteU8(dst, 0); //  gyroConfig()->checkOverflow);
         //Added in MSP API 1.42
@@ -147,7 +147,7 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         break;
 #endif
     case MSP_PID_CONTROLLER:
-        sbufWriteU8(dst, 1);
+        sbufWriteU8(dst, 0);
         break;
     case MSP_PIDNAMES: {
         const char pidNames[] = "ROLL;PITCH;YAW;LEVEL;MAG;";
@@ -264,7 +264,7 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
 //            FRSKY_OSD = 16
 //        };
         uint16_t mask = 0;
-        sbufWriteU16(dst, mask | 0b000000011000001);
+        sbufWriteU16(dst, mask | 0b0000000011000001);
         sbufWriteU8(dst, 10);
         sbufWriteU8(dst, 5);
         sbufWriteU8(dst, 5);
