@@ -709,12 +709,12 @@ static void blackboxLogIteration(timeUs_t currentTimeUs) {
 }
 
 void blackboxStart(void) {
-    if (blackboxState == BLACKBOX_STATE_STOPPED) {
+    if (blackboxState != BLACKBOX_STATE_DISABLED && blackboxState == BLACKBOX_STATE_STOPPED) {
         blackboxState = BLACKBOX_STATE_SEND_START;
     }
 }
 void blackboxStop(void) {
-    if (blackboxState != BLACKBOX_STATE_STOPPED) {
+    if (blackboxState != BLACKBOX_STATE_DISABLED && blackboxState != BLACKBOX_STATE_STOPPED) {
         blackboxState = BLACKBOX_STATE_SHUTTING_DOWN;
     }
 }

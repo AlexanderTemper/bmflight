@@ -266,8 +266,8 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         uint16_t mask = 0;
         sbufWriteU16(dst, mask | 0b0000000011000001);
         sbufWriteU8(dst, 10);
-        sbufWriteU8(dst, 5);
-        sbufWriteU8(dst, 5);
+        sbufWriteU8(dst, 0);
+        sbufWriteU8(dst, 0);
         sbufWriteU8(dst, 0);
     }
         break;
@@ -309,7 +309,7 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         sbufWriteU8(dst, getFcConfig()->ARM_TIMEOUT_US / 100000);
         sbufWriteU8(dst, getFcConfig()->ARM_TIMEOUT_US / 100000);
         sbufWriteU16(dst, 0);
-        sbufWriteU8(dst, 0);
+        sbufWriteU8(dst, 2);
         sbufWriteU16(dst, 0);
         sbufWriteU8(dst, 1);
         break;
@@ -413,12 +413,14 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         }
     }
         break;
+#ifdef USE_BLACKBOX
     case MSP_BLACKBOX_START:
         blackboxStart();
         break;
     case MSP_BLACKBOX_STOP:
         blackboxStop();
         break;
+#endif
     case MSP_MIXER_CONFIG:
         sbufWriteU8(dst, 3); //QUADX
         sbufWriteU8(dst, 0);
@@ -516,9 +518,13 @@ static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
         break;
 #ifdef USE_BLACKBOX
     case MSP_SET_BLACKBOX_CONFIG: {
-        if (sbufReadU8(src) == BLACKBOX_DEVICE_SERIAL) {
-            blackboxConfig()->device = sbufReadU8(src);
+        uint8_t bdevice = sbufReadU8(src);
+        if (bdevice == BLACKBOX_DEVICE_SERIAL) {
+            blackboxConfig()->device = BLACKBOX_DEVICE_SERIAL;
             getFcConfig()->blackboxEnabled = true;
+        } else {
+            blackboxConfig()->device = BLACKBOX_DEVICE_NONE;
+            getFcConfig()->blackboxEnabled = false;
         }
     }
         break;
