@@ -74,7 +74,7 @@ static bool bmg160Read(gyroDev_t *gyro) {
     }
     gyro->raw[X] = rawData.datax;
     gyro->raw[Y] = rawData.datay;
-    gyro->raw[Z] = -rawData.dataz;
+    gyro->raw[Z] = rawData.dataz;
 
     gyro->lastReadTime = micros();
 

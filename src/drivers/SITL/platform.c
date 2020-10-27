@@ -260,7 +260,7 @@ static bool gyro_simRead(gyroDev_t *gyro) {
 
     gyro->raw[X] = lastSimPkt.imu_angular_velocity_rpy[X];
     gyro->raw[Y] = lastSimPkt.imu_angular_velocity_rpy[Y];
-    gyro->raw[Z] = -lastSimPkt.imu_angular_velocity_rpy[Z];
+    gyro->raw[Z] = lastSimPkt.imu_angular_velocity_rpy[Z];
 
     gyro->lastReadTime = lastSimPkt.timestamp * 1000000;
 
