@@ -49,7 +49,7 @@ void readJoy(void) {
     case JS_EVENT_AXIS:
         switch (event.number) {
         case 0:
-            rx_joy.yaw = (((float) event.value / 32767) * 500) + 1500;
+            rx_joy.yaw = (((float) -event.value / 32767) * 500) + 1500;
             break;
         case 1:
             rx_joy.throttle = ((((float) -event.value / 32767) + 1) / 2) * 1000 + 1000;

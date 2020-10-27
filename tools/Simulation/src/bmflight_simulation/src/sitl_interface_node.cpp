@@ -127,13 +127,13 @@ float scale_angular_velocities(int16_t motor) {
 
     //((PWM_1 * ANGULAR_MOTOR_COEFFICIENT) + MOTORS_INTERCEPT);
     /// max_rot_velocity for model = 838 but this is to big
-    int max_rot_velocity = 838 - 150;
+    int max_rot_velocity = 838 - 250;
 
     float temp = (float) (motor - 1000) / 1000; // Scale to 0-1
     if(motor< 1050){
         return 0;
     }
-    return temp * max_rot_velocity + 150; //todo make me better
+    return temp * max_rot_velocity + 250; //todo make me better
 }
 /**
  * thread for handling udp packages

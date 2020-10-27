@@ -6,7 +6,7 @@ for Quadrocopter Control by Jian Wang et al.) -->
   <xacro:property name="rotor_velocity_slowdown_sim" value="10" />
   <xacro:property name="use_mesh_file" value="true" />
   <xacro:property name="mesh_file" value="package://bmflight_simulation/meshes/bmflight_test_drone.dae" />
-  <xacro:property name="mass" value="0.68" /> <!-- [kg] -->
+  <xacro:property name="mass" value="0.88" /> <!-- [kg] -->
   <xacro:property name="body_width" value="0.08" /> <!-- [m] -->
   <xacro:property name="body_height" value="0.06" /> <!-- [m] -->
   <xacro:property name="mass_rotor" value="0.009" /> <!-- [kg] -->
