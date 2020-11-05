@@ -123,17 +123,14 @@ int udpRecv(udpLink_t* link, void* data, size_t size, uint32_t timeout_ms) {
 //    //printf("odometry Data: [%f,%f,%f]\n", real.roll, real.pitch, real.yaw);
 //}
 
+#define MAXROTORV 838
+float motorScale = MAXROTORV/sqrt(1000);
 float scale_angular_velocities(int16_t motor) {
-
-    //((PWM_1 * ANGULAR_MOTOR_COEFFICIENT) + MOTORS_INTERCEPT);
-    /// max_rot_velocity for model = 838 but this is to big
-    int max_rot_velocity = 838 - 250;
-
-    float temp = (float) (motor - 1000) / 1000; // Scale to 0-1
+    float temp = sqrt(motor-1000)*motorScale;
     if(motor< 1050){
         return 0;
     }
-    return temp * max_rot_velocity + 250; //todo make me better
+    return temp;
 }
 /**
  * thread for handling udp packages
