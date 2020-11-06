@@ -6,7 +6,7 @@
   <xacro:property name="mesh_file" value="package://bmflight_simulation/meshes/bmflight_test_drone.dae" />
   <xacro:property name="mass" value="0.88" /> <!-- [kg] -->
   <xacro:property name="body_width" value="0.08" /> <!-- [m] -->
-  <xacro:property name="body_height" value="0.06" /> <!-- [m] -->
+  <xacro:property name="body_height" value="0.04" /> <!-- [m] -->
   <xacro:property name="mass_rotor" value="0.005" /> <!-- [kg] -->
   
   <xacro:property name="rotor_offset_top" value="0.018" /> <!-- [m] -->
@@ -23,7 +23,8 @@
 
   <!-- Property Blocks -->
   <xacro:property name="body_inertia">
-    <inertia ixx="0.002815882266667" ixy="0.0" ixz="0.0" iyy="0.001085115477333" iyz="0.0" izz="0.003813904410667" /> <!-- [kg m^2] [kg m^2] [kg m^2] [kg m^2] [kg m^2] [kg m^2] -->
+   <!-- [kg m^2] [kg m^2] [kg m^2] [kg m^2] [kg m^2] [kg m^2] -->
+    <inertia ixx="0.001438548933333" ixy="0.0" ixz="0.0" iyy="0.002462448810667" iyz="0.0" izz="0.003813904410667" /> 
   </xacro:property>
 
   <!-- inertia of a single rotor, assuming it is a cuboid. Height=5m, width=15mm -->
