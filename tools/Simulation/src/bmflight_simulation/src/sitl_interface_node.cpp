@@ -54,7 +54,6 @@ float scale_angular_velocities(int16_t motor) {
     return temp;
 }
 
-int timeout;
 /**
  * thread for handling udp packages
  * @param data
@@ -62,7 +61,6 @@ int timeout;
 static void* udpThread(void* data) {
     (void) (data);
     while (true) {
-        timeout ++;
         int n = udpRecv(&pwmLink, &pwmPkt, sizeof(servo_packet), 100);
         if (n == sizeof(servo_packet)) {
             mav_msgs::ActuatorsPtr actuator_msg(new mav_msgs::Actuators);
@@ -77,12 +75,8 @@ static void* udpThread(void* data) {
             actuator_msg->header.stamp.nsec = current_time.nsec;
 
             actuators_pub.publish(actuator_msg);
-            timeout = 0;
             //todo display timout
-            //printf("get motor data %d %d %d %d\n", pwmPkt.motor_speed[0], pwmPkt.motor_speed[1], pwmPkt.motor_speed[2], pwmPkt.motor_speed[3]);
-        }
-        if(timeout == 1000){
-            printf("get motor timedout");
+            printf("get motor data %d %d %d %d\n", pwmPkt.motor_speed[0], pwmPkt.motor_speed[1], pwmPkt.motor_speed[2], pwmPkt.motor_speed[3]);
         }
     }
 
