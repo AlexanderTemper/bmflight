@@ -1,12 +1,14 @@
-bmflight Simulation Gazebo-ROS Interface
+Bmflight Gazebo-ROS Simulation 
 ===============
-# work in progress!!!
-This ROS package is based on the CrazyS extension for the ROS package RotorS.
+This ROS package is based on the CrazyS extension for the ROS package RotorS and provides an simulation enviroment for the bmflight firmware.
+
+![](https://raw.githubusercontent.com/AlexanderTemper/bmflight/master/doc/img/sim2total.png)
+
 
 For installing follow instruction under:
 https://github.com/gsilano/CrazyS/blob/master/README.md
 
-Here the excerpt for my setup:
+Here the excerpt of setup:
 
 Installation Instructions - Ubuntu 18.04 with ROS Melodic and Gazebo 9
 ---------------------------------------------------------
@@ -80,7 +82,7 @@ $ sudo apt-get install gazebo9 gazebo9-* ros-melodic-gazebo-*
 $ sudo apt upgrade
 ```
 
-# building ROS package
+# Building ROS package
 ```
 $ catkin build
 ```
@@ -88,33 +90,40 @@ Source the package so it is available to ros
 ```
 soure devel/setup.bash
 ```
-# start simulation interface
-to start the testdrone use:
+# Start SITL Simulation
 
-launch sitl
+
+
+
+1.) Launch SITL
 ```
 $ ../../bin/SITL.elf
 ```
-launch gateway tool
+2.) Launch Gateway Tool in sim bridge mode
 ```
 ./Gateway/bin/gateway.out tcp 127.0.0.1 -simBridge
 ```
-launch world and mav
+3.) Launch world and test drone
 ```
 $ roslaunch bmflight_simulation test.launch
 ```
-launch joy node
+4.) Launch Joy Node 
+
+PS3 Controller is used if other controller should be used **joyCallback** in gateway_node need to be adapted.
 ```
 $ rosrun joy joy_node
 ```
-launch gateway node
+5.)Launch Gateway Node
 ```
 $ rosrun bmflight_simulation gateway_node bmflight
 ```
-launch interface
-(sometimes buggy relaunch untill get motor data is gisplayed) //todo fix this
+5.)Launch SITL interface
 ```
 $ rosrun bmflight_simulation sitl_interface_node bmflight
 ```
+```diff
+# (sometimes buggy relaunch until get motor data is displayed)
+```
+
 
 
