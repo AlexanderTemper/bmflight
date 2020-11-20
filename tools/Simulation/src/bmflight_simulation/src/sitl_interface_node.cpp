@@ -8,6 +8,7 @@
 #include <math.h>
 #include <pthread.h>
 #include "udplink.h"
+#include "common.h"
 
 #define UDP_SIM_PORT 8810
 #define UDP_SIM_BRIDGE_PORT 8812
@@ -22,6 +23,7 @@ typedef struct {
 
 typedef struct {
     double timestamp;                   // in seconds
+    uint16_t rx[6];
 } sim_Rx_packet;
 
 typedef struct {
@@ -37,38 +39,10 @@ typedef struct {
 
 static att_packet attPkt;
 static servo_packet pwmPkt;
-static udpLink_t stateLink, pwmLink, attLink;
+static udpLink_t stateLink, pwmLink, attLink, rxLink;
 static pthread_t udpWorker, udpWorkerAtt;
 static pthread_mutex_t udpLock;
 static ros::Publisher actuators_pub;
-
-//typedef struct {
-//    float roll;
-//    float pitch;
-//    float yaw;
-//    double timestamp;
-//} attitude_t;
-//
-//
-//static attitude_t real;
-//void odometryCallback(const nav_msgs::OdometryConstPtr& odometry_msg) {
-//    ROS_INFO_ONCE("odometryCallback got first odometry message.");
-//    rotors_control::EigenOdometry odometry;
-//    rotors_control::eigenOdometryFromMsg(odometry_msg, &odometry);
-//    Eigen::Vector3d euler_angles;
-//    mav_msgs::getEulerAnglesFromQuaternion(odometry.orientation, &euler_angles);
-//
-//    real.roll = euler_angles.x() * (1800.0f / M_PI);
-//    real.pitch = euler_angles.y() * (1800.0f / M_PI);
-//    real.yaw = -euler_angles.z() * (1800.0f / M_PI);
-//
-//    if (real.yaw < 0) {
-//        real.yaw += 3600;
-//    }
-//
-//    real.timestamp = odometry_msg->header.stamp.toSec();
-//    //printf("odometry Data: [%f,%f,%f]\n", real.roll, real.pitch, real.yaw);
-//}
 
 #define MAXROTORV 838
 float motorScale = MAXROTORV / sqrt(1000);
@@ -79,6 +53,8 @@ float scale_angular_velocities(int16_t motor) {
     }
     return temp;
 }
+
+int timeout;
 /**
  * thread for handling udp packages
  * @param data
@@ -86,6 +62,7 @@ float scale_angular_velocities(int16_t motor) {
 static void* udpThread(void* data) {
     (void) (data);
     while (true) {
+        timeout ++;
         int n = udpRecv(&pwmLink, &pwmPkt, sizeof(servo_packet), 100);
         if (n == sizeof(servo_packet)) {
             mav_msgs::ActuatorsPtr actuator_msg(new mav_msgs::Actuators);
@@ -100,7 +77,12 @@ static void* udpThread(void* data) {
             actuator_msg->header.stamp.nsec = current_time.nsec;
 
             actuators_pub.publish(actuator_msg);
+            timeout = 0;
+            //todo display timout
             //printf("get motor data %d %d %d %d\n", pwmPkt.motor_speed[0], pwmPkt.motor_speed[1], pwmPkt.motor_speed[2], pwmPkt.motor_speed[3]);
+        }
+        if(timeout == 1000){
+            printf("get motor timedout");
         }
     }
 
@@ -156,19 +138,31 @@ static void imuCallback(const sensor_msgs::ImuConstPtr& imu_msg) {
     //printf("IMU Data: gyro:%f %f %f acc:%f %f %f\n", gyroX, gyroY, gyroZ, simPkg.imu_linear_acceleration_xyz[0], simPkg.imu_linear_acceleration_xyz[1], simPkg.imu_linear_acceleration_xyz[2]);
 
     udpSend(&stateLink, &simPkg, sizeof(simPkg));
-//    sim_Rx_packet simRXPkg;
-//    simRXPkg.timestamp = imu_msg->header.stamp.toSec();
-//    udpSend(&stateLink, &simRXPkg, sizeof(simRXPkg));
+//
 
     //printf("IMU Data: gyro:%f %f %f acc:%f %f %f\n", gyroX, gyroY, gyroZ, accX, accY, accZ);
+}
+
+void gatewayCallback(const mav_msgs::RollPitchYawrateThrustConstPtr& msg) {
+    sim_Rx_packet simRXPkg;
+    simRXPkg.timestamp = msg->header.stamp.toSec();
+    simRXPkg.rx[THROTTLE] = msg->thrust.z;
+    simRXPkg.rx[AUX1] = msg->thrust.x;
+    simRXPkg.rx[AUX2] = msg->thrust.y;
+    simRXPkg.rx[ROLL] = msg->roll;
+    simRXPkg.rx[PITCH] = msg->pitch;
+    simRXPkg.rx[YAW] = msg->yaw_rate;
+    //ROS_INFO("RC-COMMAND [%i,%i,%i,%i] ",rx[ROLL],rx[PITCH],rx[YAW],rx[THROTTLE]);
+    udpSend(&rxLink, &simRXPkg, sizeof(simRXPkg));
 }
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "sitl_interface");
     ros::NodeHandle nh;
-    ROS_INFO_ONCE("Started position controller");
+    ROS_INFO_ONCE("Started Sitl Interface");
     ros::Subscriber imu_sub;
     ros::Subscriber odometry_sub;
+    ros::Subscriber cmd_gateway_sub;
 
     ros::V_string args;
     ros::removeROSArgs(argc, argv, args);
@@ -181,10 +175,17 @@ int main(int argc, char** argv) {
     std::string actuators_pub_topic = "/" + args.at(1) + "/command/motor_speed";
     std::cout << imu_topic << "\n";
 //
-    ROS_INFO_ONCE("start UDP client...");
+    ROS_INFO_ONCE("start UDP client for sensors...");
     int ret = udpInit(&stateLink, "127.0.0.1", UDP_SIM_PORT, false);
     if (ret != 0) {
-        ROS_ERROR("CANT START UDP CLIENT");
+        ROS_ERROR("CANT START UDP CLIENT sensors");
+        return 1;
+    }
+
+    ROS_INFO_ONCE("start UDP client for rx...");
+    ret = udpInit(&rxLink, "127.0.0.1", UDP_SIM_BRIDGE_PORT, false);
+    if (ret != 0) {
+        ROS_ERROR("CANT START UDP CLIENT rx");
         return 1;
     }
 
@@ -215,8 +216,8 @@ int main(int argc, char** argv) {
     }
 
     imu_sub = nh.subscribe(imu_topic, 1, imuCallback);
-
-    //odometry_sub = nh.subscribe(odometry_topic, 1, odometryCallback);
+    cmd_gateway_sub = nh.subscribe(mav_msgs::default_topics::COMMAND_ROLL_PITCH_YAWRATE_THRUST, 1, &gatewayCallback);
+//odometry_sub = nh.subscribe(odometry_topic, 1, odometryCallback);
 //
 //
 //    ros::NodeHandle nh2;

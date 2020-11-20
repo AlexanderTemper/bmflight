@@ -35,4 +35,10 @@ add_executable(sitl_interface_node src/sitl_interface_node.cpp)
 target_link_libraries(sitl_interface_node
    ${catkin_LIBRARIES}
 )
+
+add_executable(gateway_node src/gateway_node.cpp)
+target_link_libraries(gateway_node
+   ${catkin_LIBRARIES}
+)
+
 target_link_libraries(sitl_interface_node udplink ${catkin_LIBRARIES})

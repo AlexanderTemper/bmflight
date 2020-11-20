@@ -31,8 +31,10 @@ static udpLink_t fromSimLink;
 static udpLink_t toSimLink;
 static pthread_t udpWorker;
 typedef struct {
-    double timestamp;  // in seconds
+    double timestamp;                   // in seconds
+    uint16_t rx[6];
 } sim_Rx_packet;
+sim_Rx_packet lastSimRXPkt;
 
 typedef struct {
     int16_t roll;
@@ -183,27 +185,29 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
     }
 }
 
-int armedFake = true;
-int wobbleFake = 1000;
 static void taskJoy(timeUs_t currentTimeUs) {
-    readJoy();
     uint8_t data[12];
     sbuf_t buf;
     sbufInit(&buf, &data[0], &data[11]);
 
-//    rx_joy.arm = 1000;
-//    rx_joy.roll = 1500;
-//    rx_joy.pitch = 1500;
-//    rx_joy.yaw = 1500;
-//    rx_joy.throttle = (wobbleFake += 10) % 1000 + 1000;
-//    rx_joy.arm = armedFake ? 2000 : 1000;
-
-    sbufWriteU16(&buf, rx_joy.roll);
-    sbufWriteU16(&buf, rx_joy.pitch);
-    sbufWriteU16(&buf, rx_joy.yaw);
-    sbufWriteU16(&buf, rx_joy.throttle);
-    sbufWriteU16(&buf, rx_joy.arm);
-    sbufWriteU16(&buf, 1);  // Todo wenn hier 5 gehts ned was macht liux da
+    if (tcp && simBridgeEnabled) {
+        //printf("got rx paket %d %d %d %d %d %d\n", lastSimRXPkt.rx[0], lastSimRXPkt.rx[1], lastSimRXPkt.rx[2], lastSimRXPkt.rx[3], lastSimRXPkt.rx[4], lastSimRXPkt.rx[5]);
+        sbufInit(&buf, &data[0], &data[11]);
+        sbufWriteU16(&buf, lastSimRXPkt.rx[0]);
+        sbufWriteU16(&buf, lastSimRXPkt.rx[1]);
+        sbufWriteU16(&buf, lastSimRXPkt.rx[2]);
+        sbufWriteU16(&buf, lastSimRXPkt.rx[3]);
+        sbufWriteU16(&buf, lastSimRXPkt.rx[4]);
+        sbufWriteU16(&buf, lastSimRXPkt.rx[5]);
+    } else {
+        readJoy();
+        sbufWriteU16(&buf, rx_joy.roll);
+        sbufWriteU16(&buf, rx_joy.pitch);
+        sbufWriteU16(&buf, rx_joy.yaw);
+        sbufWriteU16(&buf, rx_joy.throttle);
+        sbufWriteU16(&buf, rx_joy.arm);
+        sbufWriteU16(&buf, 1);  // Todo wenn hier 5 gehts ned was macht liux da
+    }
 
     sbufSwitchToReader(&buf, &data[0]);
     //printf("roll %6d, pitch %6d, yaw %6d, thrust %6d, arm %d \n", rx_joy.roll, rx_joy.pitch, rx_joy.yaw, rx_joy.throttle, rx_joy.arm);
@@ -352,10 +356,10 @@ static int parseArgs(int argc, char *argv[]) {
 static void* udpThread(void* data) {
     (void) (data);
     while (tcp && simBridgeEnabled) {
-        sim_Rx_packet simRxPkt;
-        int n = udpRecv(&fromSimLink, &simRxPkt, sizeof(simRxPkt), 1);
-        if (n == sizeof(simRxPkt)) {
-            printf("got rx paket\n\n");
+        sim_Rx_packet simRxPktTemp;
+        int n = udpRecv(&fromSimLink, &simRxPktTemp, sizeof(simRxPktTemp), 1);
+        if (n == sizeof(simRxPktTemp)) {
+            memcpy(&lastSimRXPkt, &simRxPktTemp, sizeof(simRxPktTemp));
         }
     }
 
@@ -418,6 +422,7 @@ int main(int argc, char *argv[]) {
         }
 
         setTaskEnabled(TASK_ATTITUDE, true);
+        setTaskEnabled(TASK_RX, true);
         printf("--->Task Attitude enabled\n");
     }
 
