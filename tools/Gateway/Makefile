@@ -9,6 +9,7 @@ MSG_MKDIR = "MKDIR   $(dir $@)"
 CC := gcc
 #------------------------------ Linker ----------------------------------
 LD := gcc
+LDFLAGS += -lpthread
 
 # Dependency file flags.
 DEPFLAGS = -MD -MP -MQ $@
@@ -72,6 +73,7 @@ CSRCS_FC_SRC := \
 	src/msp/msp.c \
 	src/common/debug.c \
 	src/drivers/SITL/serial_tcp.c \
+	src/drivers/SITL/udplink.c \
 	
 	# Include PATHS
 INC_PATH += $(TEST_FRAMEWORK) 

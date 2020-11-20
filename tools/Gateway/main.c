@@ -6,10 +6,17 @@
 #include "common/debug.h"
 #include "uart_serial.h"
 #include "drivers/SITL/serial_tcp.h"
+#include "drivers/SITL/udplink.h"
 #include "joy.h"
 #include "fc/tasks.h"
 #include "scheduler/scheduler.h"
 #include "common/streambuf.h"
+
+// Mode Flags
+bool uart = false;
+bool tcp = false;
+bool joyEnabled = false;
+bool simBridgeEnabled = false;
 
 #define BLACKBOX_LOGFILE_NAME "bmflog.TXT"
 static struct timespec start_time;
@@ -17,7 +24,21 @@ static serialPort_t serialInstance;
 static mspPort_t mspPort;
 static tcpPort_t tcpSerialPort;
 static FILE *blackBoxFile;
-bool uart = false;
+
+// udp package definition
+#define UDP_SIM_BRIDGE_PORT 8812
+static udpLink_t fromSimLink;
+static udpLink_t toSimLink;
+static pthread_t udpWorker;
+typedef struct {
+    double timestamp;  // in seconds
+} sim_Rx_packet;
+
+typedef struct {
+    int16_t roll;
+    int16_t pitch;
+    int16_t yaw;
+} att_packet;
 
 #define BUFFER_SIZE 256
 static uint8_t rxBuffer[BUFFER_SIZE];
@@ -98,11 +119,21 @@ static void mspFcProcessReply(mspPacket_t *cmd) {
     }
     case MSP_ATTITUDE: {
         int16_t att[3];
-        printf("\n get ATT");
         for (int i = 0; i < 3; i++) {
             att[i] = sbufReadU16(src);
         }
-        printf(" %d %d %d\n", att[X], att[Y], att[Z]);
+
+        if (tcp && simBridgeEnabled) {
+            att_packet attPkg;
+            attPkg.roll = att[0];
+            attPkg.pitch = att[1];
+            attPkg.yaw = att[2];
+            udpSend(&toSimLink, &attPkg, sizeof(attPkg));
+            //printf("send!! %d %d %d\n", attPkg.roll, attPkg.pitch, attPkg.yaw);
+            return;
+        }
+        printf("\n get ATT %d %d %d\n", att[X], att[Y], att[Z]);
+
         break;
     }
     case MSP_BLACKBOX_DATA: {
@@ -184,8 +215,6 @@ static void taskSystem(timeUs_t currentTimeUs) {
 }
 
 static void taskLogger(timeUs_t currentTimeUs) {
-    armedFake = false;
-    printf("endLogging\n");
     //mspSerialPush(&mspPort, MSP_BLACKBOX_STOP, 0, 0, MSP_DIRECTION_REQUEST);
 }
 static void taskHandleSerial(timeUs_t currentTimeUs) {
@@ -199,17 +228,25 @@ static void taskLoop(timeUs_t currentTimeUs) {
 
 }
 
+/**
+ * reqeust attitude form fc
+ * @param currentTimeUs
+ */
+static void taskAtt(timeUs_t currentTimeUs) {
+    mspSerialPush(&mspPort, MSP_ATTITUDE, 0, 0, MSP_DIRECTION_REQUEST); //request Attitude
+}
+
 static task_t tasks[TASK_COUNT] = {
     [TASK_LOOP] = { //Needed RealTime Task (in firmware main gyro looptime)
         .taskName = "TASK_LOOP",
         .taskFunc = taskLoop,
         .staticPriority = 200,
         .desiredPeriodUs = 100000000, },
-    [TASK_ATTITUDE] = { //Needed RealTime Task (in firmware main gyro looptime)
-        .taskName = "TASK_LOOP",
-        .taskFunc = taskLoop,
-        .staticPriority = 200,
-        .desiredPeriodUs = 100000000, },
+    [TASK_ATTITUDE] = {
+        .taskName = "TASK_ATT",
+        .taskFunc = taskAtt,
+        .staticPriority = 1,
+        .desiredPeriodUs = TASK_PERIOD_HZ(50), },
     [TASK_SERIAL] = {
         .taskName = "TASK_SERIAL",
         .taskFunc = taskHandleSerial,
@@ -267,25 +304,87 @@ static void sitl_delayNanoSeconds(timeUs_t nsec) {
     }
 }
 
+const char usage[] = "-------- Usage --------\n\n  gateway [uart] [devName]"
+        " or gateway [tcp] [address]\n\n"
+        "  -simBridge .... enable bride to simulation\n"
+        "  -joyEnable .... enable joy stick input\n\n\n";
+
+static int parseArgs(int argc, char *argv[]) {
+
+    char * address;
+    for (int i = 0; i < argc; i++) {
+        if (!strcmp(argv[i], "-joyEnable")) {
+            joyEnabled = true;
+        }
+        if (!strcmp(argv[i], "-simBridge")) {
+            simBridgeEnabled = true;
+        }
+
+        if (!strcmp(argv[i], "uart")) {
+            uart = true;
+            if (i >= (argc - 1)) {
+                printf("!! please define device\n\n");
+                return -1;
+            }
+            if (!initialize_uart_serial(argv[i + 1])) {
+                return -1;
+            }
+        }
+        if (!strcmp(argv[i], "tcp")) {
+            tcp = true;
+            if (i >= (argc - 1)) {
+                printf("!! please define address\n\n");
+                return -1;
+            }
+            tcp_initialize_client(&tcpSerialPort, argv[i + 1]); //setup tcp Port
+            initialize_tcp_serial();
+            printf("--->TCP connected to %s:%d\n", argv[i + 1], BASE_PORT);
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * thread for handling udp packages
+ * @param data
+ */
+static void* udpThread(void* data) {
+    (void) (data);
+    while (tcp && simBridgeEnabled) {
+        sim_Rx_packet simRxPkt;
+        int n = udpRecv(&fromSimLink, &simRxPkt, sizeof(simRxPkt), 1);
+        if (n == sizeof(simRxPkt)) {
+            printf("got rx paket\n\n");
+        }
+    }
+
+    printf("udpThread end!!\n");
+    return NULL;
+}
+
 int main(int argc, char *argv[]) {
     initDebug(&debugStdout);
     clock_gettime(CLOCK_MONOTONIC, &start_time);
     initTime(&sitl_millis, &sitl_micros, &sitl_delayNanoSeconds);
 
-    if (argc == 3 && !strcmp(argv[1], "uart")) {
-        printf("Start Uart Serial\n");
-        if (!initialize_uart_serial(argv[2])) {
+    if (parseArgs(argc, argv) < 0) {
+        printf(usage);
+        return -1;
+    }
+
+    if (tcp && simBridgeEnabled) {
+        int ret = udpInit(&fromSimLink, NULL, UDP_SIM_BRIDGE_PORT, true);
+        if (ret != 0) {
+            printf("simBridge error!\n");
             return -1;
         }
-        uart = true;
-
-    } else if (argc == 3 && !strcmp(argv[1], "tcp")) {
-
-        tcp_initialize_client(&tcpSerialPort, argv[2]); //setup tcp Port
-        initialize_tcp_serial();
-    } else {
-        printf("-------- Usage --------\n    gateway [uart] [devName]\n    or\n    gateway [tcp] [address]\n");
-        return -1;
+        ret = udpInit(&toSimLink, NULL, UDP_SIM_BRIDGE_PORT + 1, false);
+        if (ret != 0) {
+            printf("simBridge error!\n");
+            return -1;
+        }
+        printf("--->simBridge is enabled\n");
     }
 
     mspPort.mspProcessCommandFnPtr = &mspFcProcessCommand;
@@ -299,25 +398,43 @@ int main(int argc, char *argv[]) {
     }
     schedulerInit();
 
-    int js = initJoy("/dev/input/js0");
+    int js = -1;
+    if (joyEnabled) {
+        int js = initJoy("/dev/input/js0");
 
-    if (js == -1) {
-        perror("Joy not connected");
-    } else {
-    setTaskEnabled(TASK_RX, true);
+        if (js == -1) {
+            perror("Joy not connected");
+            return -1;
+        } else {
+            setTaskEnabled(TASK_RX, true);
+        }
+    }
+
+    if (tcp && simBridgeEnabled) {
+        int ret = pthread_create(&udpWorker, NULL, udpThread, NULL);
+        if (ret != 0) {
+            printf("Create udpWorker error!\n");
+            return -1;
+        }
+
+        setTaskEnabled(TASK_ATTITUDE, true);
+        printf("--->Task Attitude enabled\n");
     }
 
     setTaskEnabled(TASK_SERIAL, true);
     setTaskEnabled(TASK_LOOP, true);
     setTaskEnabled(TASK_DEBUG, true);
 
-    //mspSerialPush(&mspPort, MSP_BLACKBOX_START, 0, 0, MSP_DIRECTION_REQUEST); //start logging immediate
     while (1) {
         scheduler();
         delayNanoSeconds(50);
+
     }
 
-    close(js);
+    if (js != -1) {
+        close(js);
+    }
+
     return 0;
 }
 

@@ -9,8 +9,8 @@
 #include <pthread.h>
 #include "udplink.h"
 
-
 #define UDP_SIM_PORT 8810
+#define UDP_SIM_BRIDGE_PORT 8812
 typedef struct {
     double timestamp;                   // in seconds
     double imu_angular_velocity_rpy[3];
@@ -22,14 +22,23 @@ typedef struct {
 
 typedef struct {
     double timestamp;                   // in seconds
+} sim_Rx_packet;
+
+typedef struct {
+    int16_t roll;
+    int16_t pitch;
+    int16_t yaw;
+} att_packet;
+
+typedef struct {
+    double timestamp;                   // in seconds
     uint16_t motor_speed[4]; // [1000-2000]
 } servo_packet;
 
+static att_packet attPkt;
 static servo_packet pwmPkt;
-
-static udpLink_t stateLink, pwmLink;
-
-static pthread_t udpWorker;
+static udpLink_t stateLink, pwmLink, attLink;
+static pthread_t udpWorker, udpWorkerAtt;
 static pthread_mutex_t udpLock;
 static ros::Publisher actuators_pub;
 
@@ -62,10 +71,10 @@ static ros::Publisher actuators_pub;
 //}
 
 #define MAXROTORV 838
-float motorScale = MAXROTORV/sqrt(1000);
+float motorScale = MAXROTORV / sqrt(1000);
 float scale_angular_velocities(int16_t motor) {
-    float temp = sqrt(motor-1000)*motorScale;
-    if(motor< 1050){
+    float temp = sqrt(motor - 1000) * motorScale;
+    if (motor < 1050) {
         return 0;
     }
     return temp;
@@ -91,8 +100,28 @@ static void* udpThread(void* data) {
             actuator_msg->header.stamp.nsec = current_time.nsec;
 
             actuators_pub.publish(actuator_msg);
-            printf("get motor data %d %d %d %d\n", pwmPkt.motor_speed[0], pwmPkt.motor_speed[1], pwmPkt.motor_speed[2], pwmPkt.motor_speed[3]);
+            //printf("get motor data %d %d %d %d\n", pwmPkt.motor_speed[0], pwmPkt.motor_speed[1], pwmPkt.motor_speed[2], pwmPkt.motor_speed[3]);
         }
+    }
+
+    printf("udpThread end!!\n");
+    return NULL;
+}
+
+/**
+ * thread for handling udp packages for attitude
+ * @param data
+ */
+static void* udpThreadAtt(void* data) {
+    (void) (data);
+    while (true) {
+
+        int n = udpRecv(&attLink, &attPkt, sizeof(att_packet), 100);
+        if (n == sizeof(att_packet)) {
+            //todo send to gateway node
+            //printf("got att %d %d %d\n", attPkt.roll, attPkt.pitch, attPkt.yaw);
+        }
+
     }
 
     printf("udpThread end!!\n");
@@ -127,6 +156,9 @@ static void imuCallback(const sensor_msgs::ImuConstPtr& imu_msg) {
     //printf("IMU Data: gyro:%f %f %f acc:%f %f %f\n", gyroX, gyroY, gyroZ, simPkg.imu_linear_acceleration_xyz[0], simPkg.imu_linear_acceleration_xyz[1], simPkg.imu_linear_acceleration_xyz[2]);
 
     udpSend(&stateLink, &simPkg, sizeof(simPkg));
+//    sim_Rx_packet simRXPkg;
+//    simRXPkg.timestamp = imu_msg->header.stamp.toSec();
+//    udpSend(&stateLink, &simRXPkg, sizeof(simRXPkg));
 
     //printf("IMU Data: gyro:%f %f %f acc:%f %f %f\n", gyroX, gyroY, gyroZ, accX, accY, accZ);
 }
@@ -163,8 +195,20 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    ret = udpInit(&attLink, NULL, UDP_SIM_BRIDGE_PORT + 1, true);
+    if (ret != 0) {
+        ROS_ERROR("CANT START UDP SERVER for ATT");
+        return 1;
+    }
+
     actuators_pub = nh.advertise < mav_msgs::Actuators > (actuators_pub_topic, 1); //done before udpWorker boot
     ret = pthread_create(&udpWorker, NULL, udpThread, NULL);
+    if (ret != 0) {
+        ROS_ERROR("CANT START UDP WORKER");
+        return 1;
+    }
+
+    ret = pthread_create(&udpWorkerAtt, NULL, udpThreadAtt, NULL);
     if (ret != 0) {
         ROS_ERROR("CANT START UDP WORKER");
         return 1;
