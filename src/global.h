@@ -15,4 +15,7 @@ typedef enum {
 
 #define TARGET_LOOP_HZ 500
 
-//#include <stdio.h> // Todo weg
+#ifdef FC_TARGET_SITL
+    #include <stdio.h>
+#endif
+

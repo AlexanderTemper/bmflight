@@ -22,9 +22,9 @@ typedef enum {
 #define EEPROM_CONF_VERSION 6 //make sure to change if struct changes
 
 typedef struct pid_config_s {
-    float Kp[XYZ_AXIS_COUNT];
-    float Ki[XYZ_AXIS_COUNT];
-    float Kd[XYZ_AXIS_COUNT];
+    uint8_t Kp[XYZ_AXIS_COUNT];
+    uint8_t Ki[XYZ_AXIS_COUNT];
+    uint8_t Kd[XYZ_AXIS_COUNT];
 } pid_config_t;
 
 typedef struct config_s {

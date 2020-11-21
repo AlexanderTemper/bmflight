@@ -26,17 +26,17 @@ static config_t default_fc_config = {
     .MAX_ARMING_ANGLE = 25,
     .rate_controller_config = {
         .Kp = {
-            0.1f,
-            0.1f,
-            0.1f },
+            10,
+            10,
+            10 },
         .Ki = {
-            0.00f,
-            0.00f,
-            0.00f },
+            0,
+            0,
+            0 },
         .Kd = {
-            0.00f,
-            0.00f,
-            0.00f } },
+            0,
+            0,
+            0 } },
     .levelGain = 0.0f,
     .deciLevelAngleLimit = 150,
     .ACC_TRIM = {
@@ -96,6 +96,14 @@ void initFC(void) {
 #ifdef USE_BLACKBOX
     //init blackBox
     blackboxInit(fc_config.blackboxEnabled);
+#endif
+
+#ifdef FC_TARGET_SITL
+    printf("Init FC with PID:\n");
+
+    printf("   ROLL: p[%d],i[%d],d[%d]\n", fc_config.rate_controller_config.Kp[X], fc_config.rate_controller_config.Ki[X], fc_config.rate_controller_config.Kd[X]);
+    printf("   PITCH: p[%d],i[%d],d[%d]\n", fc_config.rate_controller_config.Kp[Y], fc_config.rate_controller_config.Ki[Y], fc_config.rate_controller_config.Kd[Y]);
+    printf("   YAW: p[%d],i[%d],d[%d]\n", fc_config.rate_controller_config.Kp[Z], fc_config.rate_controller_config.Ki[Z], fc_config.rate_controller_config.Kd[Z]);
 #endif
 }
 

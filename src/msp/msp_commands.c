@@ -179,9 +179,9 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         break;
     case MSP_PID: {
         for (int i = 0; i < 3; i++) {
-            sbufWriteU8(dst, getFcConfig()->rate_controller_config.Kp[i] * 100.0f);
-            sbufWriteU8(dst, getFcConfig()->rate_controller_config.Ki[i] * 100.0f);
-            sbufWriteU8(dst, getFcConfig()->rate_controller_config.Kd[i] * 100.0f);
+            sbufWriteU8(dst, getFcConfig()->rate_controller_config.Kp[i]);
+            sbufWriteU8(dst, getFcConfig()->rate_controller_config.Ki[i]);
+            sbufWriteU8(dst, getFcConfig()->rate_controller_config.Kd[i]);
         }
         //ATT
         sbufWriteU8(dst, getFcConfig()->levelGain * 10);
@@ -473,9 +473,9 @@ static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
         break;
     case MSP_SET_PID: {
         for (int i = 0; i < 3; i++) {
-            getFcConfig()->rate_controller_config.Kp[i] = sbufReadU8(src) / 100.0f;
-            getFcConfig()->rate_controller_config.Ki[i] = sbufReadU8(src) / 100.0f;
-            getFcConfig()->rate_controller_config.Kd[i] = sbufReadU8(src) / 100.0f;
+            getFcConfig()->rate_controller_config.Kp[i] = sbufReadU8(src);
+            getFcConfig()->rate_controller_config.Ki[i] = sbufReadU8(src);
+            getFcConfig()->rate_controller_config.Kd[i] = sbufReadU8(src);
         }
         getFcConfig()->levelGain = sbufReadU8(src) / 10.0f;
     }
