@@ -201,11 +201,7 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
     }
         break;
     case MSP_RC_TUNING: {
-        uint8_t rcRates[3] = {
-            100,
-            100,
-            100 };
-        sbufWriteU8(dst, rcRates[X]);
+        sbufWriteU8(dst,  getFcConfig()->RC_RATES[X]);
         sbufWriteU8(dst, 0); //rcExpo
         for (int i = 0; i < 3; i++) {
             sbufWriteU8(dst, 0); // R,P,Y see flight_dynamics_index_t
@@ -215,8 +211,8 @@ static bool mspProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst) {
         sbufWriteU16(dst, 0); //thrExpo8
         sbufWriteU8(dst, 0); //tpa_breakpoint
         sbufWriteU8(dst, 0); //rcExpo
-        sbufWriteU8(dst, rcRates[Z]);
-        sbufWriteU8(dst, rcRates[Y]);
+        sbufWriteU8(dst, getFcConfig()->RC_RATES[Z]);
+        sbufWriteU8(dst, getFcConfig()->RC_RATES[Y]);
         sbufWriteU8(dst, 0); //rcExpo
 
         // added in 1.41
@@ -468,7 +464,28 @@ static mspResult_e mspProcessInCommand(uint8_t cmdMSP, sbuf_t *src) {
         //todo
         break;
     case MSP_SET_RC_TUNING: {
-        //TODO
+        uint8_t value = sbufReadU8(src);
+        getFcConfig()->RC_RATES[PITCH] = value;
+        getFcConfig()->RC_RATES[ROLL] = value;
+        sbufReadU8(src); //expo
+
+        sbufReadU8(src); //roll_rate
+        sbufReadU8(src); //pitch_rate
+
+        sbufReadU8(src); //yaw_rate
+        sbufReadU8(src); //dynThrPID
+        sbufReadU8(src); //thrMid8
+        sbufReadU8(src); //thrExpo8
+
+        sbufReadU16(src); //dynamic_THR_breakpoint
+
+        if (sbufBytesRemaining(src) >= 1) {
+            sbufReadU8(src); //RC_YAW_EXPO
+        }
+        if (sbufBytesRemaining(src) >= 1) {
+            getFcConfig()->RC_RATES[YAW] = sbufReadU8(src);
+        }
+
     }
         break;
     case MSP_SET_PID: {

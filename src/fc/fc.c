@@ -39,6 +39,10 @@ static config_t default_fc_config = {
             0 } },
     .levelGain = 0.0f,
     .deciLevelAngleLimit = 150,
+    .RC_RATES = {
+        25,
+        25,
+        25 },
     .ACC_TRIM = {
         -38,
         -19,

@@ -9,7 +9,7 @@ static int32_t delta1[3], delta2[3];
 timeUs_t lastTime;
 
 void resetRateController(void) {
-    for(int i = 0; i < XYZ_AXIS_COUNT; i++){
+    for (int i = 0; i < XYZ_AXIS_COUNT; i++) {
         previousError[i] = 0;
         errorGyroI[i] = 0;
         delta1[i] = 0;
@@ -17,8 +17,9 @@ void resetRateController(void) {
     }
 }
 
-static int16_t updateOnAxis(uint16_t setPoint, uint16_t current, uint16_t kp, uint16_t ki, uint16_t kd, axis_e axis, timeDelta_t dt) {
+static int16_t updateOnAxis(int16_t setPoint, int16_t current, uint16_t kp, uint16_t ki, uint16_t kd, axis_e axis, timeDelta_t dt) {
 
+    current = constrain(current, -8000, +8000); //limit the gyro to +- 800 degrees
     // calculate error
     int16_t error = setPoint - current;
     // -----calculate I component
@@ -33,24 +34,23 @@ static int16_t updateOnAxis(uint16_t setPoint, uint16_t current, uint16_t kp, ui
     errorGyroI[axis] = constrain(errorGyroI[axis], -2097152, +2097152);
 
     //-----calculate D-term
-    int32_t delta = error - previousError[axis];  // 16 bits is ok here, the dif between 2 consecutive gyro reads is limited
+    // dT is fixed to approximative 2048us (488Hz)
+    int32_t delta = (error - previousError[axis]);  //max 8000
+    previousError[axis] = error;
 
-    // Correct difference by cycle time. Cycle time is jittery (can be different 2 times), so calculated difference
-    // would be scaled by different dt each time. Division by dT fixes that.
-    delta = (delta * ((uint16_t) 0xFFFF / (dt >> 4))) >> 6;
     // add moving average here to reduce noise
-    int32_t deltaSum = delta1[axis] + delta2[axis] + delta;
+    int32_t deltaSum = delta1[axis] + delta2[axis] + delta;  //max 8000*3 = 240000
     delta2[axis] = delta1[axis];
     delta1[axis] = delta;
 
     // calculate terms
-    int16_t p = (error * kp) >> 7; // /128
+    int16_t p = (error * kp) >> 8; // /256
     int16_t i = errorGyroI[axis] >> 13;   // /8292
-    int16_t d = (delta * kd) >> 8;
+    int16_t d = (deltaSum * kd) >> 8; // /256
 
-    //printf("e[%d] de[%d] deltaSum[%d]\n",error,delta,deltaSum);
-    // save error
-    previousError[axis] = error;
+    //printf("%d:: delta1[%d] delta2[%d] delta[%d] deltaSum[%d]\n",axis,delta1[axis],delta2[axis],delta,deltaSum);
+
+    //printf("%d:: error[%d] setPoint[%d] current[%d] p[%d]\n",axis,error,setPoint,current,p);
 
 #ifdef USE_BLACKBOX
     pid_debug_t* pidDebug = &getFcDebug()->pid_debug;

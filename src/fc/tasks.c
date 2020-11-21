@@ -79,10 +79,10 @@ static void taskRx(timeUs_t currentTimeUs) {
         fcStatus->ARMED = false;
     }
     if (fcControl->rx.chan[AUX2] > 1600) {
-            fcStatus->ANGLE = true;
-        } else {
-            fcStatus->ANGLE = false;
-        }
+        fcStatus->ANGLE = true;
+    } else {
+        fcStatus->ANGLE = false;
+    }
 
 }
 static void taskHandleSerial(timeUs_t currentTimeUs) {
@@ -95,17 +95,24 @@ static void taskAttitude(timeUs_t currentTimeUs) {
     updateEstimatedAttitude(currentTimeUs);
 
     if (fcStatus->ANGLE) {
-       // attitude controller
-       fcControl->attitude_command.axis[ROLL] = fcControl->fc_command.roll;
-       fcControl->attitude_command.axis[PITCH] = fcControl->fc_command.pitch;
-       fcControl->attitude_command.axis[YAW] = fcControl->fc_command.yaw;
-       //printf("%d %d,%d,%d  %d\n", fcStatus->ARMED, fcControl->attitude_command.axis[ROLL], fcControl->attitude_command.axis[PITCH], fcControl->attitude_command.axis[YAW], fcControl->fc_command.throttle);
-       updateAttitudeController(fcControl, fcConfig, currentTimeUs, &attitude);
+        // attitude controller
+        fcControl->attitude_command.axis[ROLL] = fcControl->fc_command.roll;
+        fcControl->attitude_command.axis[PITCH] = fcControl->fc_command.pitch;
+        fcControl->attitude_command.axis[YAW] = fcControl->fc_command.yaw;
+        //printf("%d %d,%d,%d  %d\n", fcStatus->ARMED, fcControl->attitude_command.axis[ROLL], fcControl->attitude_command.axis[PITCH], fcControl->attitude_command.axis[YAW], fcControl->fc_command.throttle);
+        updateAttitudeController(fcControl, fcConfig, currentTimeUs, &attitude);
+
     } else {
-       fcControl->rate_command.axis[ROLL] = fcControl->fc_command.roll;
-       fcControl->rate_command.axis[PITCH] = fcControl->fc_command.pitch;
-       fcControl->rate_command.axis[YAW] = fcControl->fc_command.yaw;
+        fcControl->rate_command.axis[ROLL] = fcControl->fc_command.roll;
+        fcControl->rate_command.axis[PITCH] = fcControl->fc_command.pitch;
+        fcControl->rate_command.axis[YAW] = fcControl->fc_command.yaw;
     }
+
+    //scale with rcRate
+    fcControl->rate_command.axis[ROLL] = ((int32_t) fcControl->rate_command.axis[ROLL] * fcConfig->RC_RATES[ROLL]) / 25;
+    fcControl->rate_command.axis[PITCH] = ((int32_t) fcControl->rate_command.axis[PITCH] * fcConfig->RC_RATES[PITCH]) / 25;
+    fcControl->rate_command.axis[YAW] = ((int32_t) fcControl->rate_command.axis[YAW] * fcConfig->RC_RATES[YAW]) / 25;
+    //printf("%d %d %d\n", fcControl->rate_command.axis[ROLL], fcControl->rate_command.axis[PITCH], fcControl->rate_command.axis[YAW]);
 }
 static void taskLoop(timeUs_t currentTimeUs) {
     //Timeout 500ms
@@ -128,7 +135,7 @@ static void taskLoop(timeUs_t currentTimeUs) {
         fcControl->mixer_command.axis[Z] = 0;
     } else {
         //update rate controller make sure sensors->gyro.filtered[.] gets the new gyro data
-        updateRateController(fcControl, &sensors->gyro, &fcConfig->rate_controller_config, currentTimeUs); //TODO set Arming back
+        updateRateController(fcControl, &sensors->gyro, &fcConfig->rate_controller_config, currentTimeUs);
     }
 
     //update Motor

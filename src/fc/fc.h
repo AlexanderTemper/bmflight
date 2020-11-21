@@ -38,6 +38,7 @@ typedef struct config_s {
     int16_t MAXCHECK;
     int8_t YAW_DIRECTION;
     int16_t ACC_TRIM[XYZ_AXIS_COUNT];
+    uint8_t RC_RATES[XYZ_AXIS_COUNT];
     int32_t ARM_TIMEOUT_US;
     uint8_t MAX_ARMING_ANGLE;
     pid_config_t rate_controller_config;
