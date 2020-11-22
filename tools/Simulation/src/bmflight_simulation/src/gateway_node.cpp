@@ -71,9 +71,10 @@ void joyCallback(const sensor_msgs::JoyConstPtr& msg) {
 
     rx[ROLL] = (-msg->axes[3] * 500) + 1500;
     rx[PITCH] = (msg->axes[4] * 500) + 1500;
-    rx[YAW] = (-msg->axes[0] * 500) + 1500;
+    rx[YAW] = (msg->axes[0] * 500) + 1500;
 
     rx[AUX1] = msg->buttons[5] * 2000;
+    rx[AUX2] = msg->buttons[4] * 2000;
 
     altMode = rx[AUX1] > 1800;
 

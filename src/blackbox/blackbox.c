@@ -31,6 +31,7 @@
 
 #include "blackbox/blackbox.h"
 #include "msp/msp.h"
+#include "imu/imu.h"
 #include "fc/fc.h"
 #include "fc/tasks.h"
 #include "sensor/sensor.h"
@@ -45,7 +46,7 @@
 #define BLACKBOX_MOTOR_ENABLE
 
 #define BLACKBOX_DEBUG_TIMING
-#define BLACKBOX_DEBUG_TIMING_ALL
+#define BLACKBOX_DEBUG_IMU
 
 #define DEFAULT_BLACKBOX_DEVICE  BLACKBOX_DEVICE_NONE
 // number of flight loop iterations before logging I-frame
@@ -125,19 +126,19 @@ static sbuf_t logBuffer;
 static const uint8_t blackboxHeader[] = "H Product:Blackbox flight data recorder by Nicholas Sherlock\nH Data version:2\n";
 static const uint8_t headerNamePart1[] = "H Field I name:loopIteration,time"
 #ifdef BLACKBOX_PID_ENABLE
-        ",axisP[0],axisP[1],axisP[2]"
-        ",axisI[0],axisI[1],axisI[2]"
-        ",axisD[0],axisD[1],axisD[2]"
+                ",axisP[0],axisP[1],axisP[2]"
+                ",axisI[0],axisI[1],axisI[2]"
+                ",axisD[0],axisD[1],axisD[2]"
 #endif
-                ",gyroADC[0],gyroADC[1],gyroADC[2]";
+        ",gyroADC[0],gyroADC[1],gyroADC[2]";
 static const uint8_t headerNamePart2[] =
 #ifdef BLACKBOX_ACC_ENABLE
         ",accSmooth[0],accSmooth[1],accSmooth[2]"
 #endif
 #ifdef BLACKBOX_DEBUG_TIMING
-        ",debug[0],debug[1],debug[2],debug[3]"
+                ",debug[0],debug[1],debug[2],debug[3]"
 #endif
-#ifdef BLACKBOX_DEBUG_TIMING_ALL
+#ifdef BLACKBOX_DEBUG_IMU
         ",debug[4],debug[5],debug[6],debug[7]"
 #endif
 #ifdef BLACKBOX_RC_COMMAND_ENABLE
@@ -146,16 +147,16 @@ static const uint8_t headerNamePart2[] =
 #ifdef BLACKBOX_MOTOR_ENABLE
         ",motor[0],motor[1],motor[2],motor[3]"
 #endif
-                "\n";
+        "\n";
 //1 = signed
 //0 = unsigned
 static const uint8_t headerSigned[] = "H Field I signed:0,0"
 #ifdef BLACKBOX_PID_ENABLE
-        ",1,1,1" //p
-        ",1,1,1"//i
-        ",1,1,1"//d
+                ",1,1,1" //p
+                ",1,1,1"//i
+                ",1,1,1"//d
 #endif
-                ",1,1,1" //gyroADC
+        ",1,1,1" //gyroADC
 #ifdef BLACKBOX_ACC_ENABLE
         ",1,1,1" //accSmooth
 #endif
@@ -172,28 +173,28 @@ static const uint8_t headerSigned[] = "H Field I signed:0,0"
 //0 = Predict zero
 //1 = Predict last value
 //5 = Predict motor[0]
-//11 = MINMOTOR
+//4 = Predict minthrottle
 static const uint8_t headerPredictor[] = "H Field I predictor:0,0"
 #ifdef BLACKBOX_PID_ENABLE
-        ",0,0,0" //p
-        ",0,0,0"//i
-        ",0,0,0"//d
+                ",0,0,0" //p
+                ",0,0,0"//i
+                ",0,0,0"//d
 #endif
-                ",0,0,0" //gyroADC
+        ",0,0,0" //gyroADC
 #ifdef BLACKBOX_ACC_ENABLE
         ",0,0,0" //accSmooth
 #endif
 #ifdef BLACKBOX_DEBUG_TIMING
         ",0,0,0,0" //debug timing
 #endif
-#ifdef BLACKBOX_DEBUG_TIMING_ALL
+#ifdef BLACKBOX_DEBUG_IMU
         ",0,0,0,0" //debug timing
 #endif
 #ifdef BLACKBOX_RC_COMMAND_ENABLE
         ",0,0,0,0" //rcCommand
 #endif
 #ifdef BLACKBOX_MOTOR_ENABLE
-        ",11,5,5,5" //motor
+        ",4,5,5,5" //motor
 #endif
         "\n";
 
@@ -201,25 +202,25 @@ static const uint8_t headerPredictor[] = "H Field I predictor:0,0"
 //1 = unsigned
 static const uint8_t headerEncoding[] = "H Field I encoding:1,1"
 #ifdef BLACKBOX_PID_ENABLE
-        ",0,0,0" //p
-        ",0,0,0"//i
-        ",0,0,0"//d
+                ",0,0,0" //p
+                ",0,0,0"//i
+                ",0,0,0"//d
 #endif
-                ",0,0,0" //gyroADC
+        ",0,0,0" //gyroADC
 #ifdef BLACKBOX_ACC_ENABLE
         ",0,0,0" //accSmooth
 #endif
 #ifdef BLACKBOX_DEBUG_TIMING
         ",0,0,0,0" //debug timing
 #endif
-#ifdef BLACKBOX_DEBUG_TIMING_ALL
+#ifdef BLACKBOX_DEBUG_IMU
         ",0,0,0,0" //debug timing
 #endif
 #ifdef BLACKBOX_RC_COMMAND_ENABLE
         ",0,0,0,1" //rcCommand
 #endif
 #ifdef BLACKBOX_MOTOR_ENABLE
-        ",1,0,0,0" //motor
+        ",0,0,0,0" //motor
 #endif
         "\n";
 
@@ -230,18 +231,18 @@ static const uint8_t headerEncoding[] = "H Field I encoding:1,1"
 //6 = Predict increment
 static const uint8_t pHeaderPredictor[] = "H Field P predictor:6,2"
 #ifdef BLACKBOX_PID_ENABLE
-        ",1,1,1" //p
-        ",1,1,1"//i
-        ",1,1,1"//d
+                ",1,1,1" //p
+                ",1,1,1"//i
+                ",1,1,1"//d
 #endif
-                ",3,3,3" //gyroADC
+        ",3,3,3" //gyroADC
 #ifdef BLACKBOX_ACC_ENABLE
         ",3,3,3" //accSmooth
 #endif
 #ifdef BLACKBOX_DEBUG_TIMING
         ",1,1,1,1" //debug
 #endif
-#ifdef BLACKBOX_DEBUG_TIMING_ALL
+#ifdef BLACKBOX_DEBUG_IMU
         ",1,1,1,1" //debug
 #endif
 #ifdef BLACKBOX_RC_COMMAND_ENABLE
@@ -258,25 +259,25 @@ static const uint8_t pHeaderPredictor[] = "H Field P predictor:6,2"
 //9 = NULL
 static const uint8_t pHheaderEncoding[] = "H Field P encoding:9,0"
 #ifdef BLACKBOX_PID_ENABLE
-        ",0,0,0" //p
-        ",0,0,0"//i
-        ",0,0,0"//d
+                ",0,0,0" //p
+                ",0,0,0"//i
+                ",0,0,0"//d
 #endif
-                ",0,0,0" //gyroADC
+        ",0,0,0" //gyroADC
 #ifdef BLACKBOX_ACC_ENABLE
         ",0,0,0" //accSmooth
 #endif
 #ifdef BLACKBOX_DEBUG_TIMING
         ",0,0,0,0" //debug
 #endif
-#ifdef BLACKBOX_DEBUG_TIMING_ALL
+#ifdef BLACKBOX_DEBUG_IMU
         ",0,0,0,0" //debug
 #endif
 #ifdef BLACKBOX_RC_COMMAND_ENABLE
         ",8,8,8,8" //rcCommand
 #endif
 #ifdef BLACKBOX_MOTOR_ENABLE
-        ",1,1,1,1" //motor
+        ",0,0,0,0" //motor
 #endif
         "\n";
 
@@ -512,18 +513,18 @@ static void loadMainState(timeUs_t currentTimeUs) {
     blackboxCurrent->debugTiming[1] = attTask->taskLatestDeltaTimeUs;
     blackboxCurrent->debugTiming[2] = loopTask->movingSumExecutionTimeUs / TASK_STATS_MOVING_SUM_COUNT;
     blackboxCurrent->debugTiming[3] = attTask->movingSumExecutionTimeUs / TASK_STATS_MOVING_SUM_COUNT;
+//    blackboxCurrent->debugTiming[0] = motorCommand->value[0];
+//    blackboxCurrent->debugTiming[1] = motorCommand->value[1];
+//    blackboxCurrent->debugTiming[2] = motorCommand->value[2];
+//    blackboxCurrent->debugTiming[3] = motorCommand->value[3];
 #endif
 #endif
 
-#ifdef BLACKBOX_DEBUG_TIMING_ALL
-#ifdef USE_TASK_STATISTICS
-    task_t * task1 = getTask(TASK_SERIAL);
-    task_t * task2 = getTask(TASK_SYSTEM);
-    blackboxCurrent->debugTiming[4] = task1->taskLatestDeltaTimeUs;
-    blackboxCurrent->debugTiming[5] = task2->taskLatestDeltaTimeUs;
-    blackboxCurrent->debugTiming[6] = task1->movingSumExecutionTimeUs / TASK_STATS_MOVING_SUM_COUNT;
-    blackboxCurrent->debugTiming[7] = task2->movingSumExecutionTimeUs / TASK_STATS_MOVING_SUM_COUNT;
-#endif
+#ifdef BLACKBOX_DEBUG_IMU
+    blackboxCurrent->debugTiming[4] = attitude.values.roll;
+    blackboxCurrent->debugTiming[5] = attitude.values.pitch;
+    blackboxCurrent->debugTiming[6] = attitude.values.yaw;
+    blackboxCurrent->debugTiming[7] = 0;
 #endif
 
 #ifdef BLACKBOX_MOTOR_ENABLE
@@ -589,7 +590,7 @@ static void writeIFrame(void) {
     blackboxWriteSignedVB(blackboxCurrent->debugTiming[2]);
     blackboxWriteSignedVB(blackboxCurrent->debugTiming[3]);
 #endif
-#ifdef BLACKBOX_DEBUG_TIMING_ALL
+#ifdef BLACKBOX_DEBUG_IMU
     // debug
     blackboxWriteSignedVB(blackboxCurrent->debugTiming[4]);
     blackboxWriteSignedVB(blackboxCurrent->debugTiming[5]);
@@ -606,7 +607,7 @@ static void writeIFrame(void) {
 
 #ifdef BLACKBOX_MOTOR_ENABLE
     // motor
-    blackboxWriteUnsignedVB(blackboxCurrent->motor[0] - getFcConfig()->MINTHROTTLE);
+    blackboxWriteSignedVB(blackboxCurrent->motor[0] - getFcConfig()->MINTHROTTLE);
     blackboxWriteSignedVB(blackboxCurrent->motor[1] - blackboxCurrent->motor[0]);
     blackboxWriteSignedVB(blackboxCurrent->motor[2] - blackboxCurrent->motor[0]);
     blackboxWriteSignedVB(blackboxCurrent->motor[3] - blackboxCurrent->motor[0]);
@@ -669,7 +670,7 @@ static void writePFrame(void) {
     blackboxWriteSignedVB(blackboxCurrent->debugTiming[2] - blackboxLast->debugTiming[2]);
     blackboxWriteSignedVB(blackboxCurrent->debugTiming[3] - blackboxLast->debugTiming[3]);
 #endif
-#ifdef BLACKBOX_DEBUG_TIMING_ALL
+#ifdef BLACKBOX_DEBUG_IMU
     //debug
     blackboxWriteSignedVB(blackboxCurrent->debugTiming[4] - blackboxLast->debugTiming[4]);
     blackboxWriteSignedVB(blackboxCurrent->debugTiming[5] - blackboxLast->debugTiming[5]);
