@@ -46,7 +46,7 @@
 #define BLACKBOX_MOTOR_ENABLE
 
 #define BLACKBOX_DEBUG_TIMING
-#define BLACKBOX_DEBUG_IMU
+//#define BLACKBOX_DEBUG_IMU
 
 #define DEFAULT_BLACKBOX_DEVICE  BLACKBOX_DEVICE_NONE
 // number of flight loop iterations before logging I-frame

@@ -28,7 +28,7 @@ static serialPort_t serialInstance;
 static mspPort_t mspPort;
 static sensors_t sensors;
 // buffer for serial interface
-#define BUFFER_SIZE 256
+#define BUFFER_SIZE 512
 static uint8_t rxBuffer[BUFFER_SIZE];
 static uint8_t txBuffer[BUFFER_SIZE];
 

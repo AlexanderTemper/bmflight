@@ -136,14 +136,14 @@ static void TimeSliceScedular(void){
             } else {
                 schedulerExecuteTask(getTask(TASK_SERIAL), currentTimeUs);
                 schedulerExecuteTask(getTask(TASK_RX), currentTimeUs);
-//                //execute all other Task if needed
-//                for (task_t *task = queueFirst(); task != NULL; task = queueNext()) {
-//                    // Select Task if time is expired
-//                    currentTimeUs = micros();
-//                    if (cmpTimeUs(currentTimeUs, task->lastExecutedAtUs) >= task->desiredPeriodUs) {
-//                        schedulerExecuteTask(task, currentTimeUs);
-//                    }
-//                }
+                //execute all other Task if needed
+                for (task_t *task = queueFirst(); task != NULL; task = queueNext()) {
+                    // Select Task if time is expired
+                    currentTimeUs = micros();
+                    if (cmpTimeUs(currentTimeUs, task->lastExecutedAtUs) >= task->desiredPeriodUs) {
+                        schedulerExecuteTask(task, currentTimeUs);
+                    }
+                }
             }
             attPeriod = !attPeriod;
 
