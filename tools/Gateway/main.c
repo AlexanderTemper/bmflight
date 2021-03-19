@@ -314,7 +314,6 @@ const char usage[] = "-------- Usage --------\n\n  gateway [uart] [devName]"
         "  -joyEnable .... enable joy stick input\n\n\n";
 
 static int parseArgs(int argc, char *argv[]) {
-
     char * address;
     for (int i = 0; i < argc; i++) {
         if (!strcmp(argv[i], "-joyEnable")) {
@@ -346,6 +345,9 @@ static int parseArgs(int argc, char *argv[]) {
         }
     }
 
+    if(!uart && !tcp){
+        return -1;
+    }
     return 0;
 }
 
@@ -371,7 +373,6 @@ int main(int argc, char *argv[]) {
     initDebug(&debugStdout);
     clock_gettime(CLOCK_MONOTONIC, &start_time);
     initTime(&sitl_millis, &sitl_micros, &sitl_delayNanoSeconds);
-
     if (parseArgs(argc, argv) < 0) {
         printf(usage);
         return -1;
