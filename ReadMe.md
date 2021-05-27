@@ -1,5 +1,3 @@
-
-#work in progress!!!
 ---------------------------------------------------------
 
 # Lightweight Flight Controller
