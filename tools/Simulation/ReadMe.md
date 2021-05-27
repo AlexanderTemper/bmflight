@@ -101,7 +101,7 @@ $ ../../bin/SITL.elf
 ```
 2.) Launch Gateway Tool in sim bridge mode
 ```
-./Gateway/bin/gateway.out tcp 127.0.0.1 -simBridge
+$ ./Gateway/bin/gateway.out tcp 127.0.0.1 -simBridge
 ```
 3.) Launch world and test drone
 ```
@@ -111,7 +111,7 @@ $ roslaunch bmflight_simulation test.launch
 
 PS3 Controller is used if other controller should be used **joyCallback** in gateway_node need to be adapted.
 ```
-$ rosrun joy joy_node
+rosrun joy joy_node
 ```
 5.)Launch Gateway Node
 ```
