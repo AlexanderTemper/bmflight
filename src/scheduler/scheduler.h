@@ -58,5 +58,6 @@ void getTaskInfo(taskId_e taskId, taskInfo_t * taskInfo);
 void setTaskEnabled(taskId_e taskId, bool enabled);
 void schedulerInit(void);
 void scheduler(void);
+void dynamicScedular(void);
 uint16_t getSystemLoad(void);
 void taskSystemLoad(timeUs_t currentTimeUs);

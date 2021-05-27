@@ -432,7 +432,7 @@ int main(int argc, char *argv[]) {
     setTaskEnabled(TASK_DEBUG, true);
 
     while (1) {
-        scheduler();
+        dynamicScedular();
         delayNanoSeconds(50);
 
     }
